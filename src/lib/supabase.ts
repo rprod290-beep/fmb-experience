@@ -1,0 +1,63 @@
+import { createClient } from '@supabase/supabase-js';
+
+// Types pour la base de données Supabase
+export interface Event {
+  id: string;
+  slug: string;
+  title: string;
+  subtitle: string | null;
+  event_date: string;
+  description: string | null;
+  secret_address: string | null; // Note: null pour les requêtes publiques via la vue
+  cover_image_url: string | null;
+  contact_email: string;
+  instagram_url: string | null;
+  whatsapp_number: string;
+  status: 'draft' | 'upcoming' | 'past';
+  created_at: string;
+}
+
+export interface DJ {
+  id: string;
+  event_id: string;
+  name: string;
+  photo_url: string | null;
+  instagram_url: string | null;
+}
+
+export interface TicketTier {
+  id: string;
+  event_id: string;
+  label: string;
+  description: string | null;
+  price: number;
+  payment_link: string;
+  display_order: number;
+  is_active: boolean;
+}
+
+export interface Buyer {
+  id: string;
+  event_id: string;
+  confirmation_code: string;
+  name_or_pseudo: string | null;
+  ticket_tier_label: string | null;
+  status: 'pending' | 'verified' | 'added_close_friends';
+  notes: string | null;
+  created_at: string;
+}
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Supabase URL or Anon Key is missing from environment variables.');
+}
+
+// Client unique pour l'application
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  }
+});

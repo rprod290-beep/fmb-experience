@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #030303;
+  --foreground: #f5f5f7;
+  --primary: #9333ea; /* Violet */
+  --secondary: #db2777; /* Rose */
+  --accent: #10b981; /* Vert Émeraude */
+  --card-bg: rgba(13, 13, 20, 0.6);
+  --card-border: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  color: var(--foreground);
+  background-color: var(--background);
+  background-image: 
+    radial-gradient(circle at 10% 20%, rgba(147, 51, 234, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 90% 80%, rgba(219, 39, 119, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.04) 0%, transparent 60%);
+  background-attachment: fixed;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Custom styling tokens */
+@layer components {
+  .glass {
+    background: var(--card-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--card-border);
+  }
+  
+  .glass-card {
+    @apply glass rounded-2xl p-6 transition-all duration-300;
+  }
+  
+  .glass-card-hover {
+    @apply glass-card hover:bg-opacity-80 hover:border-white/15 hover:shadow-[0_0_30px_rgba(147,51,234,0.2)] hover:-translate-y-1;
+  }
+
+  .glow-btn-primary {
+    @apply relative overflow-hidden bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-medium px-6 py-3 rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(147,51,234,0.4)] hover:shadow-[0_0_25px_rgba(147,51,234,0.6)] active:scale-[0.98];
+  }
+
+  .glow-btn-secondary {
+    @apply relative overflow-hidden bg-white/10 hover:bg-white/15 border border-white/10 text-white font-medium px-6 py-3 rounded-xl transition-all duration-300 active:scale-[0.98];
+  }
+
+  .neon-text-purple {
+    text-shadow: 0 0 10px rgba(147, 51, 234, 0.5);
+  }
+
+  .neon-text-pink {
+    text-shadow: 0 0 10px rgba(219, 39, 119, 0.5);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #030303;
+}
+::-webkit-scrollbar-thumb {
+  background: #1f1f2e;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3b3b4f;
+}
