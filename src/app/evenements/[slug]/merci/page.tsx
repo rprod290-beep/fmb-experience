@@ -156,6 +156,29 @@ export default function ThankYouPage({ params }: PageProps) {
             </button>
           </div>
 
+          {/* QR CODE CARD */}
+          <div className="glass p-6 rounded-3xl border border-white/10 space-y-4 shadow-[0_0_40px_rgba(219,39,119,0.05)]">
+            <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">
+              Votre QR Code d'Entrée
+            </p>
+            
+            <div className="bg-white p-3 rounded-2xl w-48 h-48 mx-auto flex items-center justify-center shadow-lg relative group">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                  typeof window !== 'undefined' 
+                    ? window.location.origin + '/admin/scan?code=' + code 
+                    : 'https://fmb-experience.vercel.app/admin/scan?code=' + code
+                )}`}
+                alt="QR Code de confirmation"
+                className="w-[180px] h-[180px]"
+              />
+            </div>
+            
+            <p className="text-[10px] text-white/40 max-w-xs mx-auto leading-relaxed">
+              Présentez ce QR Code le jour J. L'équipe d'organisation le scannera avec un smartphone pour valider votre entrée en un clic.
+            </p>
+          </div>
+
           {/* Validation Instructions */}
           <div className="glass p-6 rounded-3xl border border-white/5 text-left space-y-4 text-xs leading-relaxed text-white/80">
             <h3 className="font-bold text-sm text-white uppercase tracking-wider border-b border-white/5 pb-2">
