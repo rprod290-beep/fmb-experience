@@ -32,6 +32,7 @@ export interface TicketTier {
   description: string | null;
   price: number;
   payment_link: string;
+  paypal_link?: string | null;
   display_order: number;
   is_active: boolean;
 }

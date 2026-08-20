@@ -96,20 +96,29 @@ export default function EventDetailsPage({ params }: PageProps) {
     }
   }, [slug]);
 
-  const handleRegisterAndCheckout = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!event || !selectedTier || !buyerName) return;
+  const handleRegisterAndCheckout = async (paymentMethod: 'sumup' | 'paypal') => {
+    if (!event || !selectedTier || !buyerName.trim()) {
+      setRegistrationError("Veuillez saisir votre nom.");
+      return;
+    }
 
     setRegistering(true);
     setRegistrationError('');
 
     try {
       // 1. Enregistre le buyer en 'pending' et obtient le code unique
-      const result = await registerBuyer(event.id, buyerName, selectedTier.label);
+      const result = await registerBuyer(event.id, buyerName.trim(), selectedTier.label);
 
       if (result.success && result.confirmationCode) {
-        // 2. Ouvre le lien de paiement SumUp dans un nouvel onglet
-        window.open(selectedTier.payment_link, '_blank');
+        // 2. Détermine le lien de paiement approprié
+        const paymentLink = paymentMethod === 'paypal' && selectedTier.paypal_link
+          ? selectedTier.paypal_link
+          : selectedTier.payment_link;
+
+        if (paymentLink) {
+          // Ouvre le lien de paiement dans un nouvel onglet
+          window.open(paymentLink, '_blank');
+        }
 
         // 3. Redirige l'onglet actuel vers la page Merci
         router.push(`/evenements/${event.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(selectedTier.label)}`);
@@ -396,7 +405,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                 </p>
               </div>
 
-              <form onSubmit={handleRegisterAndCheckout} className="space-y-4">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-white/60 uppercase tracking-widest mb-2">
                     Nom Complet ou Pseudo
@@ -411,7 +420,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                   />
                   <p className="text-[9px] text-white/30 mt-1.5 flex items-start gap-1">
                     <Info className="w-3.5 h-3.5 flex-shrink-0" />
-                    Ce nom permettra aux organisateurs d'associer votre paiement SumUp à votre billet.
+                    Ce nom permettra aux organisateurs d'associer votre paiement à votre billet.
                   </p>
                 </div>
 
@@ -419,15 +428,38 @@ export default function EventDetailsPage({ params }: PageProps) {
                   <p className="text-xs text-pink-500 font-semibold">{registrationError}</p>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={registering}
-                  className="glow-btn-primary w-full py-3.5 text-xs flex items-center justify-center gap-1.5 uppercase font-bold tracking-widest"
-                >
-                  {registering ? 'Création de votre code...' : 'Continuer vers le paiement'} 
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </button>
-              </form>
+                <div className="space-y-3 pt-2">
+                  {/* SumUp Payment Link */}
+                  {selectedTier.payment_link && (
+                    <button
+                      type="button"
+                      disabled={registering}
+                      onClick={() => handleRegisterAndCheckout('sumup')}
+                      className="glow-btn-primary w-full py-3.5 text-xs flex items-center justify-center gap-1.5 uppercase font-bold tracking-widest"
+                    >
+                      {registering ? 'Création...' : selectedTier.paypal_link ? '💳 Payer par Carte (SumUp)' : 'Continuer vers le paiement'}
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+
+                  {/* PayPal Payment Link */}
+                  {selectedTier.paypal_link && (
+                    <button
+                      type="button"
+                      disabled={registering}
+                      onClick={() => handleRegisterAndCheckout('paypal')}
+                      className="w-full py-3.5 text-xs flex items-center justify-center gap-1.5 uppercase font-bold tracking-widest bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(234,179,8,0.05)]"
+                    >
+                      {registering ? 'Création...' : selectedTier.payment_link ? '🟡 Payer par PayPal' : 'Continuer vers le paiement'}
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+
+                  {!selectedTier.payment_link && !selectedTier.paypal_link && (
+                    <p className="text-xs text-center text-white/40 py-2">Aucun moyen de paiement configuré pour ce tarif.</p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>
