@@ -158,19 +158,16 @@ export default function EventDetailsPage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col text-white pb-20 relative">
-      {/* Base background color */}
-      <div className="fixed inset-0 -z-40 bg-[#050508]" />
-
+    <div className="min-h-screen flex flex-col bg-[#050508] text-white pb-20 relative">
       {/* Fixed Full-page Background Image of the Flyer */}
       {event.cover_image_url && (
         <>
           <div 
-            className="fixed inset-0 -z-30 pointer-events-none bg-cover bg-center bg-no-repeat opacity-[0.25]"
+            className="fixed inset-0 -z-30 pointer-events-none bg-cover bg-center bg-no-repeat opacity-[0.22]"
             style={{ backgroundImage: `url(${event.cover_image_url})` }}
           />
           {/* Dark backdrop overlay to preserve text readability */}
-          <div className="fixed inset-0 -z-20 pointer-events-none bg-black/75 backdrop-blur-[1px]" />
+          <div className="fixed inset-0 -z-20 pointer-events-none bg-black/70 backdrop-blur-[1px]" />
         </>
       )}
       {/* Header */}
