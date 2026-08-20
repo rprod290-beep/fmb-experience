@@ -158,7 +158,17 @@ export default function EventDetailsPage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#050508] text-white pb-20">
+    <div className="min-h-screen flex flex-col bg-[#050508] text-white pb-20 relative">
+      {/* Blurred background bleed from flyer colors */}
+      {event.cover_image_url && (
+        <div className="fixed inset-0 -z-30 pointer-events-none overflow-hidden opacity-[0.08]">
+          <img
+            src={event.cover_image_url}
+            alt=""
+            className="w-full h-full object-cover scale-150 blur-[150px]"
+          />
+        </div>
+      )}
       {/* Header */}
       <header className="border-b border-white/5 bg-black/40 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center">
@@ -300,6 +310,17 @@ export default function EventDetailsPage({ params }: PageProps) {
 
         {/* Right pane: Ticket Shop */}
         <div className="space-y-6">
+          {/* Sharp Flyer Card */}
+          {event.cover_image_url && (
+            <div className="glass rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
+              <img
+                src={event.cover_image_url}
+                alt="Flyer officiel de la soirée"
+                className="w-full h-auto object-contain hover:scale-[1.02] transition-transform duration-500"
+              />
+            </div>
+          )}
+
           <div className="glass p-6 rounded-3xl border border-white/5 space-y-4">
             <div className="flex justify-between items-center border-b border-white/5 pb-3">
               <h3 className="text-lg font-black uppercase tracking-wider text-white">
