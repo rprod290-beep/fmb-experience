@@ -84,3 +84,41 @@ body {
   }
 }
 
+/* Immersive gate portal exit transition effects */
+@keyframes portal-exit-overlay {
+  0% {
+    opacity: 1;
+    backdrop-filter: blur(12px);
+  }
+  20% {
+    background-color: #ffffff; /* brief bright strobe flash */
+  }
+  100% {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    pointer-events: none;
+  }
+}
+
+@keyframes portal-exit-logo {
+  0% {
+    transform: scale(1);
+    filter: blur(0px);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4.5);
+    filter: blur(12px);
+    opacity: 0;
+  }
+}
+
+.animate-portal-overlay {
+  animation: portal-exit-overlay 1.2s cubic-bezier(0.85, 0, 0.15, 1) forwards;
+}
+
+.animate-portal-logo {
+  animation: portal-exit-logo 1.2s cubic-bezier(0.85, 0, 0.15, 1) forwards;
+}
+
+

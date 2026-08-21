@@ -11,7 +11,7 @@ export default function Home() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   // Audio / Visualizer state
-  const [hasEntered, setHasEntered] = useState<boolean | null>(null);
+  const [hasEntered, setHasEntered] = useState<'gate' | 'entering' | 'entered' | null>(null);
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioInstance, setAudioInstance] = useState<HTMLAudioElement | null>(null);
 
@@ -37,7 +37,7 @@ export default function Home() {
   useEffect(() => {
     // Check if user already clicked Enter in this session
     const entered = sessionStorage.getItem('fmb_has_entered') === 'true';
-    setHasEntered(entered);
+    setHasEntered(entered ? 'entered' : 'gate');
 
     async function fetchEvents() {
       try {
@@ -79,10 +79,14 @@ export default function Home() {
       audio.loop = true;
       audio.volume = 0.4;
       
+      // Start music loop at 9 seconds (after synth riser usually)
+      audio.currentTime = 9;
+
       // Fallback to Mixkit Tech House Vibes loop if local intro.mp3 does not exist
       audio.addEventListener('error', () => {
         console.log("Local intro.mp3 not found, falling back to CDN track...");
         audio.src = 'https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3';
+        audio.currentTime = 9;
         audio.play().catch(err => console.error("Audio playback blocked:", err));
       });
 
@@ -99,9 +103,14 @@ export default function Home() {
       console.error("Erreur d'initialisation de l'audio:", e);
     }
 
-    // Unconditionally let user enter, even if audio playback fails
-    sessionStorage.setItem('fmb_has_entered', 'true');
-    setHasEntered(true);
+    // Set transition state to trigger animation
+    setHasEntered('entering');
+
+    // Wait 1.2 seconds for transition to finish, then unmount overlay completely
+    setTimeout(() => {
+      sessionStorage.setItem('fmb_has_entered', 'true');
+      setHasEntered('entered');
+    }, 1200);
   };
 
   // Cleanup audio on unmount
@@ -430,7 +439,7 @@ export default function Home() {
       </footer>
 
       {/* Floating Audio Controller */}
-      {hasEntered && audioInstance && (
+      {hasEntered === 'entered' && audioInstance && (
         <div className="fixed bottom-6 right-6 z-50 animate-fade-in">
           <button
             onClick={() => {
@@ -468,13 +477,17 @@ export default function Home() {
       )}
 
       {/* Immersive Entry Gate */}
-      {hasEntered === false && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#050508] overflow-hidden">
+      {hasEntered !== 'entered' && hasEntered !== null && (
+        <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#050508] overflow-hidden ${
+          hasEntered === 'entering' ? 'animate-portal-overlay' : ''
+        }`}>
           {/* Neon background blobs */}
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-[120px] animate-pulse"></div>
           <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-pink-600/10 rounded-full blur-[120px] animate-pulse"></div>
           
-          <div className="relative text-center space-y-8 z-10 p-6 max-w-sm">
+          <div className={`relative text-center space-y-8 z-10 p-6 max-w-sm transition-all duration-300 ${
+            hasEntered === 'entering' ? 'animate-portal-logo' : ''
+          }`}>
             {/* Animated Glow Logo */}
             <div className="space-y-3">
               <span className="text-[10px] font-bold text-pink-400 uppercase tracking-widest bg-pink-500/10 px-3 py-1 rounded-full border border-pink-500/20">
