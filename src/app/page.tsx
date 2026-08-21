@@ -78,15 +78,11 @@ export default function Home() {
       const audio = new Audio('/intro.mp3');
       audio.loop = true;
       audio.volume = 0.4;
-      
-      // Start music loop at 9 seconds (after synth riser usually)
-      audio.currentTime = 9;
 
       // Fallback to Mixkit Tech House Vibes loop if local intro.mp3 does not exist
       audio.addEventListener('error', () => {
         console.log("Local intro.mp3 not found, falling back to CDN track...");
         audio.src = 'https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3';
-        audio.currentTime = 9;
         audio.play().catch(err => console.error("Audio playback blocked:", err));
       });
 
@@ -106,11 +102,11 @@ export default function Home() {
     // Set transition state to trigger animation
     setHasEntered('entering');
 
-    // Wait 1.2 seconds for transition to finish, then unmount overlay completely
+    // Wait 2.2 seconds for transition to finish, then unmount overlay completely
     setTimeout(() => {
       sessionStorage.setItem('fmb_has_entered', 'true');
       setHasEntered('entered');
-    }, 1200);
+    }, 2200);
   };
 
   // Cleanup audio on unmount
