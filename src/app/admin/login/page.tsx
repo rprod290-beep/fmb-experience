@@ -1,28 +1,30 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { Lock, Mail, AlertTriangle, ArrowLeft } from 'lucide-react';
 
-export default function AdminLoginPage() {
+function AdminLoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextUrl = searchParams.get('next') || '/admin';
 
   // Rediriger si déjà connecté
   useEffect(() => {
     async function checkUser() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        router.replace('/admin');
+        router.replace(nextUrl);
       }
     }
     checkUser();
-  }, [router]);
+  }, [router, nextUrl]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +45,7 @@ export default function AdminLoginPage() {
           setErrorMsg(error.message);
         }
       } else {
-        router.replace('/admin');
+        router.replace(nextUrl);
       }
     } catch (err) {
       console.error(err);
@@ -153,5 +155,18 @@ export default function AdminLoginPage() {
         FMB Expérience Admin Portal • © {new Date().getFullYear()}
       </div>
     </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#050508] text-white">
+        <div className="w-12 h-12 rounded-full border-2 border-pink-500/20 border-t-pink-500 animate-spin"></div>
+        <p className="text-white/40 text-xs font-semibold tracking-wider uppercase">Connexion Admin...</p>
+      </div>
+    }>
+      <AdminLoginForm />
+    </Suspense>
   );
 }
