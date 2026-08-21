@@ -220,14 +220,26 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleInlineCheckIn = async (forceVerify = false) => {
+  const handleInlineCheckIn = async (forceVerify = false, incrementAmount = 1, checkInAll = false) => {
     if (!inlineBuyer) return;
     setInlineUpdating(true);
 
     try {
+      const currentCheckedIn = inlineBuyer.checked_in_count || 0;
+      const totalTickets = inlineBuyer.ticket_count || 1;
+      
+      const newCheckedInCount = checkInAll 
+        ? totalTickets 
+        : Math.min(totalTickets, currentCheckedIn + incrementAmount);
+
       const updates: any = {
-        checked_in_at: new Date().toISOString()
+        checked_in_count: newCheckedInCount
       };
+
+      // Si toutes les places ont été scannées, on remplit checked_in_at
+      if (newCheckedInCount >= totalTickets) {
+        updates.checked_in_at = new Date().toISOString();
+      }
 
       if (forceVerify) {
         updates.status = 'verified';
@@ -386,43 +398,65 @@ export default function AdminDashboardPage() {
                         ) : inlineBuyer ? (
                           <div className="space-y-4 text-left p-4 bg-zinc-950/90 border border-zinc-850 rounded-2xl max-w-xs mx-auto">
                             <div className="text-center pb-2 border-b border-zinc-800">
-                              {inlineBuyer.checked_in_at ? (
-                                <span className="text-yellow-500 text-xs font-black uppercase tracking-wider block animate-pulse">⚠️ DÉJÀ SCANNÉ !</span>
+                              {inlineBuyer.checked_in_count >= (inlineBuyer.ticket_count || 1) ? (
+                                <span className="text-yellow-500 text-xs font-black uppercase tracking-wider block animate-pulse">⚠️ GROUPE COMPLET ({inlineBuyer.ticket_count}/{inlineBuyer.ticket_count})</span>
                               ) : inlineBuyer.status === 'pending' ? (
-                                <span className="text-red-500 text-xs font-black uppercase tracking-wider block">❌ PAIEMENT COMPLEMENTAIRE</span>
+                                <span className="text-red-500 text-xs font-black uppercase tracking-wider block">❌ PAIEMENT REQUIS</span>
                               ) : (
-                                <span className="text-emerald-400 text-xs font-black uppercase tracking-wider block">✅ BILLET VALIDE</span>
+                                <span className="text-emerald-400 text-xs font-black uppercase tracking-wider block">✅ BILLET VALIDE ({inlineBuyer.checked_in_count || 0}/{inlineBuyer.ticket_count || 1})</span>
                               )}
                             </div>
 
                             <div className="space-y-2 text-xs pt-1">
                               <p className="text-zinc-400">Nom : <b className="text-white uppercase font-extrabold">{inlineBuyer.name_or_pseudo}</b></p>
-                              <p className="text-zinc-400">Billet : <b className="text-white font-bold">{inlineBuyer.ticket_tier_label}</b></p>
+                              <p className="text-zinc-400">Billet : <b className="text-white font-bold">{inlineBuyer.ticket_tier_label}</b> ({inlineBuyer.ticket_count} {inlineBuyer.ticket_count > 1 ? 'places' : 'place'})</p>
                               {inlineEvent && <p className="text-zinc-400">Soirée : <b className="text-white font-bold">{inlineEvent.title}</b></p>}
-                              {inlineBuyer.checked_in_at && (
+                              {inlineBuyer.checked_in_count >= (inlineBuyer.ticket_count || 1) && inlineBuyer.checked_in_at && (
                                 <p className="text-yellow-500/80 text-[10px] bg-yellow-500/5 p-1.5 rounded border border-yellow-500/10 mt-1">
-                                  Validé le : <b>{new Date(inlineBuyer.checked_in_at).toLocaleTimeString('fr-FR')}</b>
+                                  Dernier scan le : <b>{new Date(inlineBuyer.checked_in_at).toLocaleTimeString('fr-FR')}</b>
                                 </p>
                               )}
                             </div>
 
-                            <div className="pt-2 flex gap-2">
+                            <div className="pt-2 flex flex-col gap-2">
                               {inlineBuyer.status === 'pending' ? (
-                                <button
-                                  onClick={() => handleInlineCheckIn(true)}
-                                  disabled={inlineUpdating}
-                                  className="flex-grow py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg text-xs uppercase"
-                                >
-                                  {inlineUpdating ? 'Validation...' : 'Forcer & Valider'}
-                                </button>
-                              ) : !inlineBuyer.checked_in_at ? (
-                                <button
-                                  onClick={() => handleInlineCheckIn(false)}
-                                  disabled={inlineUpdating}
-                                  className="flex-grow py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs uppercase"
-                                >
-                                  {inlineUpdating ? 'Validation...' : 'Valider l\'entrée'}
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => handleInlineCheckIn(true, 1, false)}
+                                    disabled={inlineUpdating}
+                                    className="w-full py-2.5 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg text-xs uppercase"
+                                  >
+                                    {inlineUpdating ? 'Validation...' : inlineBuyer.ticket_count > 1 ? 'Forcer & Valider 1 entrée' : 'Forcer & Valider'}
+                                  </button>
+                                  {inlineBuyer.ticket_count > 1 && (
+                                    <button
+                                      onClick={() => handleInlineCheckIn(true, 0, true)}
+                                      disabled={inlineUpdating}
+                                      className="w-full py-2 bg-red-800 hover:bg-red-750 text-white font-bold rounded-lg text-[10px] uppercase"
+                                    >
+                                      {inlineUpdating ? 'Validation...' : `Forcer & Valider groupe (${inlineBuyer.ticket_count})`}
+                                    </button>
+                                  )}
+                                </>
+                              ) : inlineBuyer.checked_in_count < (inlineBuyer.ticket_count || 1) ? (
+                                <>
+                                  <button
+                                    onClick={() => handleInlineCheckIn(false, 1, false)}
+                                    disabled={inlineUpdating}
+                                    className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-xs uppercase"
+                                  >
+                                    {inlineUpdating ? 'Validation...' : inlineBuyer.ticket_count > 1 ? `Valider entrée (${inlineBuyer.checked_in_count + 1}/${inlineBuyer.ticket_count})` : 'Valider l\'entrée'}
+                                  </button>
+                                  {inlineBuyer.ticket_count > 1 && (inlineBuyer.ticket_count - inlineBuyer.checked_in_count) > 1 && (
+                                    <button
+                                      onClick={() => handleInlineCheckIn(false, 0, true)}
+                                      disabled={inlineUpdating}
+                                      className="w-full py-2 bg-emerald-800 hover:bg-emerald-700 text-white font-bold rounded-lg text-[10px] uppercase"
+                                    >
+                                      {inlineUpdating ? 'Validation...' : `Valider tout le groupe (${inlineBuyer.ticket_count - inlineBuyer.checked_in_count})`}
+                                    </button>
+                                  )}
+                                </>
                               ) : null}
                               
                               <button

@@ -90,14 +90,26 @@ function ScanResultContent() {
   }
 
   // 3. Mark buyer as checked-in (and optionally verify payment)
-  const handleCheckIn = async (forceVerify = false) => {
+  const handleCheckIn = async (forceVerify = false, incrementAmount = 1, checkInAll = false) => {
     if (!buyer) return;
     setUpdating(true);
 
     try {
+      const currentCheckedIn = buyer.checked_in_count || 0;
+      const totalTickets = buyer.ticket_count || 1;
+      
+      const newCheckedInCount = checkInAll 
+        ? totalTickets 
+        : Math.min(totalTickets, currentCheckedIn + incrementAmount);
+
       const updates: any = {
-        checked_in_at: new Date().toISOString()
+        checked_in_count: newCheckedInCount
       };
+
+      // Si toutes les places ont été scannées, on remplit checked_in_at
+      if (newCheckedInCount >= totalTickets) {
+        updates.checked_in_at = new Date().toISOString();
+      }
 
       if (forceVerify) {
         updates.status = 'verified';
@@ -114,7 +126,11 @@ function ScanResultContent() {
         alert("Erreur lors de la validation : " + error.message);
       } else if (data) {
         setBuyer(data);
-        alert(forceVerify ? "Billet validé & Entrée enregistrée !" : "Entrée enregistrée avec succès !");
+        if (checkInAll || newCheckedInCount >= totalTickets) {
+          alert(forceVerify ? "Groupe validé & Entrées enregistrées !" : "Toutes les entrées du groupe ont été enregistrées !");
+        } else {
+          alert(`Entrée enregistrée (${newCheckedInCount} / ${totalTickets} personnes à l'intérieur).`);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -191,18 +207,16 @@ function ScanResultContent() {
             <div className="space-y-6">
               
               {/* STATUS CARDS */}
-              {/* 1. Status: Double check check_in_at first */}
-              {buyer.checked_in_at ? (
+              {buyer.checked_in_count >= (buyer.ticket_count || 1) ? (
                 <div className="p-6 bg-yellow-500/5 border border-yellow-500/10 rounded-2xl space-y-3">
                   <AlertTriangle className="w-12 h-12 text-yellow-500 mx-auto animate-pulse" />
                   <div>
-                    <h3 className="text-sm font-black text-yellow-500 uppercase tracking-wider">Billet Déjà Scanné !</h3>
+                    <h3 className="text-sm font-black text-yellow-500 uppercase tracking-wider">Groupe Complet !</h3>
                     <p className="text-[11px] text-zinc-400 mt-2">
-                      Ce billet a déjà été validé à l'entrée le :<br />
+                      Toutes les places de cette réservation ({buyer.ticket_count} {buyer.ticket_count > 1 ? 'places' : 'place'}) ont déjà été validées.<br />
+                      Dernier scan enregistré à :<br />
                       <b className="text-zinc-200 mt-1 block">
-                        {new Date(buyer.checked_in_at).toLocaleDateString('fr-FR', {
-                          day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit'
-                        })}
+                        {buyer.checked_in_at ? new Date(buyer.checked_in_at).toLocaleTimeString('fr-FR') : '—'}
                       </b>
                     </p>
                   </div>
@@ -213,7 +227,7 @@ function ScanResultContent() {
                   <div>
                     <h3 className="text-sm font-black text-red-400 uppercase tracking-wider">Paiement Non Vérifié</h3>
                     <p className="text-xs text-zinc-400 mt-2 leading-relaxed">
-                      Ce billet a été réservé mais le paiement n'a pas encore été approuvé dans l'administration.
+                      Ce billet ({buyer.ticket_count} {buyer.ticket_count > 1 ? 'places' : 'place'}) a été réservé mais le paiement n'a pas encore été approuvé.
                     </p>
                   </div>
                 </div>
@@ -221,9 +235,9 @@ function ScanResultContent() {
                 <div className="p-6 bg-emerald-500/5 border border-emerald-500/15 rounded-2xl space-y-3 shadow-[0_0_30px_rgba(16,185,129,0.05)]">
                   <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
                   <div>
-                    <h3 className="text-sm font-black text-emerald-400 uppercase tracking-wider">Billet Valide</h3>
+                    <h3 className="text-sm font-black text-emerald-400 uppercase tracking-wider">Billet Valide ({buyer.checked_in_count || 0} / {buyer.ticket_count || 1} entrés)</h3>
                     <p className="text-xs text-zinc-400 mt-1">
-                      Accès autorisé.
+                      Accès autorisé pour le reste du groupe ({ (buyer.ticket_count || 1) - (buyer.checked_in_count || 0) } places restantes).
                     </p>
                   </div>
                 </div>
@@ -243,7 +257,7 @@ function ScanResultContent() {
                   <Ticket className="w-4 h-4 text-purple-400 flex-shrink-0" />
                   <div>
                     <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Billet & Catégorie</span>
-                    <span className="font-extrabold text-white text-xs">{buyer.ticket_tier_label || 'Non spécifié'}</span>
+                    <span className="font-extrabold text-white text-xs">{buyer.ticket_tier_label || 'Non spécifié'} ({buyer.ticket_count} {buyer.ticket_count > 1 ? 'places' : 'place'})</span>
                   </div>
                 </div>
 
@@ -259,28 +273,52 @@ function ScanResultContent() {
               </div>
 
               {/* ACTION BUTTONS */}
-              <div className="pt-2">
+              <div className="space-y-3 pt-2">
                 {buyer.status === 'pending' ? (
-                  <button
-                    onClick={() => handleCheckIn(true)}
-                    disabled={updating}
-                    className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase tracking-widest rounded-2xl transition-colors shadow-lg flex items-center justify-center gap-2"
-                  >
-                    {updating ? 'Mise à jour...' : 'Forcer la validation & l\'entrée'}
-                    <ShieldCheck className="w-4 h-4" />
-                  </button>
-                ) : !buyer.checked_in_at ? (
-                  <button
-                    onClick={() => handleCheckIn(false)}
-                    disabled={updating}
-                    className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs uppercase tracking-widest rounded-2xl transition-colors shadow-[0_0_20px_rgba(16,185,129,0.2)] flex items-center justify-center gap-2"
-                  >
-                    {updating ? 'Enregistrement...' : 'Valider l\'entrée (Check-In)'}
-                    <CheckCircle2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => handleCheckIn(true, 1, false)}
+                      disabled={updating}
+                      className="w-full py-4 bg-red-600 hover:bg-red-500 text-white font-extrabold text-xs uppercase tracking-widest rounded-2xl transition-colors shadow-lg flex items-center justify-center gap-2"
+                    >
+                      {updating ? 'Mise à jour...' : buyer.ticket_count > 1 ? 'Forcer & Valider 1 entrée' : 'Forcer la validation & l\'entrée'}
+                      <ShieldCheck className="w-4 h-4" />
+                    </button>
+                    
+                    {buyer.ticket_count > 1 && (
+                      <button
+                        onClick={() => handleCheckIn(true, 0, true)}
+                        disabled={updating}
+                        className="w-full py-3 bg-red-800 hover:bg-red-750 text-white font-bold text-xs uppercase tracking-widest rounded-2xl transition-colors shadow-md flex items-center justify-center gap-2"
+                      >
+                        {updating ? 'Mise à jour...' : `Forcer & Valider tout le groupe (${buyer.ticket_count} places)`}
+                      </button>
+                    )}
+                  </div>
+                ) : buyer.checked_in_count < (buyer.ticket_count || 1) ? (
+                  <div className="flex flex-col gap-2">
+                    <button
+                      onClick={() => handleCheckIn(false, 1, false)}
+                      disabled={updating}
+                      className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs uppercase tracking-widest rounded-2xl transition-colors shadow-[0_0_20px_rgba(16,185,129,0.2)] flex items-center justify-center gap-2"
+                    >
+                      {updating ? 'Enregistrement...' : buyer.ticket_count > 1 ? `Valider 1 entrée (${buyer.checked_in_count + 1}/${buyer.ticket_count})` : 'Valider l\'entrée (Check-In)'}
+                      <CheckCircle2 className="w-4 h-4" />
+                    </button>
+
+                    {buyer.ticket_count > 1 && (buyer.ticket_count - buyer.checked_in_count) > 1 && (
+                      <button
+                        onClick={() => handleCheckIn(false, 0, true)}
+                        disabled={updating}
+                        className="w-full py-3 bg-emerald-800 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-widest rounded-2xl transition-colors flex items-center justify-center gap-2"
+                      >
+                        {updating ? 'Enregistrement...' : `Valider tout le groupe (${buyer.ticket_count - buyer.checked_in_count} places)`}
+                      </button>
+                    )}
+                  </div>
                 ) : (
                   <div className="text-zinc-500 text-xs font-semibold py-2">
-                    ✓ Participant enregistré à l'entrée
+                    ✓ Toutes les places de ce groupe ({buyer.ticket_count}) sont entrées
                   </div>
                 )}
               </div>

@@ -51,7 +51,8 @@ export async function verifyConfirmationCodeAndGetAddress(
 export async function registerBuyer(
   eventId: string,
   nameOrPseudo: string,
-  ticketTierLabel: string
+  ticketTierLabel: string,
+  ticketCount: number = 1
 ): Promise<{ success: boolean; confirmationCode?: string; error?: string }> {
   try {
     if (!eventId || !nameOrPseudo || !ticketTierLabel) {
@@ -68,6 +69,7 @@ export async function registerBuyer(
           name_or_pseudo: nameOrPseudo.trim(),
           ticket_tier_label: ticketTierLabel,
           status: 'pending',
+          ticket_count: ticketCount,
         },
       ])
       .select('confirmation_code')

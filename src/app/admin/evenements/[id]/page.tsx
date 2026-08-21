@@ -842,6 +842,7 @@ export default function EditEventPage({ params }: PageProps) {
                       <th className="px-6 py-4">Code Unique</th>
                       <th className="px-6 py-4">Nom / Pseudo</th>
                       <th className="px-6 py-4">Tarif</th>
+                      <th className="px-6 py-4">Places</th>
                       <th className="px-6 py-4">Statut</th>
                       <th className="px-6 py-4">Notes internes</th>
                       <th className="px-6 py-4 text-right">Actions</th>
@@ -861,6 +862,10 @@ export default function EditEventPage({ params }: PageProps) {
                         {/* Tier Label */}
                         <td className="px-6 py-4 text-pink-400 font-semibold">
                           {buyer.ticket_tier_label || '—'}
+                        </td>
+                        {/* Places Count */}
+                        <td className="px-6 py-4 text-zinc-300 font-semibold">
+                          {buyer.ticket_count || 1} <span className="text-[10px] text-zinc-500 font-normal">{buyer.checked_in_count > 0 ? `(${buyer.checked_in_count} entrés)` : '(aucun entré)'}</span>
                         </td>
                         {/* Status Select */}
                         <td className="px-6 py-4">

@@ -29,6 +29,7 @@ export default function ThankYouPage({ params }: PageProps) {
   const code = searchParams.get('code') || '';
   const tier = searchParams.get('tier') || '';
   const payLink = searchParams.get('payLink') || '';
+  const quantity = Number(searchParams.get('quantity') || '1');
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
@@ -126,7 +127,7 @@ export default function ThankYouPage({ params }: PageProps) {
               Merci pour votre commande !
             </h2>
             <p className="text-xs text-white/50 max-w-sm mx-auto mt-2 leading-relaxed">
-              Votre billet pour la catégorie <b>{tier}</b> a été réservé. Suivez les étapes ci-dessous pour débloquer votre accès.
+              Votre billet pour la catégorie <b>{tier}</b> ({quantity} {quantity === 1 ? 'place' : 'places'}) a été réservé. Suivez les étapes ci-dessous pour débloquer votre accès.
             </p>
           </div>
 

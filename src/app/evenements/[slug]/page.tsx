@@ -38,6 +38,7 @@ export default function EventDetailsPage({ params }: PageProps) {
   // Modal State
   const [selectedTier, setSelectedTier] = useState<TicketTier | null>(null);
   const [buyerName, setBuyerName] = useState('');
+  const [ticketCount, setTicketCount] = useState(1);
   const [registering, setRegistering] = useState(false);
   const [registrationError, setRegistrationError] = useState('');
 
@@ -106,17 +107,25 @@ export default function EventDetailsPage({ params }: PageProps) {
     setRegistrationError('');
 
     try {
-      // 1. Enregistre le buyer en 'pending' et obtient le code unique
-      const result = await registerBuyer(event.id, buyerName.trim(), selectedTier.label);
+      // 1. Enregistre le buyer en 'pending' et obtient le code unique avec ticketCount
+      const result = await registerBuyer(event.id, buyerName.trim(), selectedTier.label, ticketCount);
 
       if (result.success && result.confirmationCode) {
-        // 2. Détermine le lien de paiement approprié
-        const paymentLink = paymentMethod === 'paypal' && selectedTier.paypal_link
-          ? selectedTier.paypal_link
-          : selectedTier.payment_link;
+        // 2. Détermine le lien de paiement approprié avec montant dynamique si PayPal
+        let paymentLink = '';
+        const totalPrice = ticketCount * selectedTier.price;
 
-        // 3. Redirige l'onglet actuel vers la page Merci avec le lien de paiement
-        router.push(`/evenements/${event.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(selectedTier.label)}&payLink=${encodeURIComponent(paymentLink || '')}`);
+        if (paymentMethod === 'paypal' && selectedTier.paypal_link) {
+          const basePaypal = selectedTier.paypal_link.trim();
+          paymentLink = basePaypal.endsWith('/') 
+            ? `${basePaypal}${totalPrice}` 
+            : `${basePaypal}/${totalPrice}`;
+        } else {
+          paymentLink = selectedTier.payment_link;
+        }
+
+        // 3. Redirige l'onglet actuel vers la page Merci avec le lien de paiement et quantité
+        router.push(`/evenements/${event.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(selectedTier.label)}&payLink=${encodeURIComponent(paymentLink || '')}&quantity=${ticketCount}`);
       } else {
         setRegistrationError(result.error || "Une erreur s'est produite lors de l'enregistrement.");
       }
@@ -380,6 +389,7 @@ export default function EventDetailsPage({ params }: PageProps) {
               onClick={() => {
                 setSelectedTier(null);
                 setBuyerName('');
+                setTicketCount(1);
                 setRegistrationError('');
               }}
               className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
@@ -419,6 +429,30 @@ export default function EventDetailsPage({ params }: PageProps) {
                   </p>
                 </div>
 
+                <div>
+                  <label className="block text-xs font-bold text-white/60 uppercase tracking-widest mb-2">
+                    Nombre de Places
+                  </label>
+                  <select
+                    value={ticketCount}
+                    onChange={(e) => setTicketCount(Number(e.target.value))}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 transition-colors text-white cursor-pointer"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                      <option key={num} value={num} className="bg-zinc-950 text-white">
+                        {num} {num === 1 ? 'place' : 'places'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex justify-between items-center py-3 px-4 bg-white/5 rounded-xl border border-white/5">
+                  <span className="text-xs text-white/50">Total à payer :</span>
+                  <span className="text-sm font-extrabold text-white">
+                    {ticketCount * selectedTier.price} € <span className="text-[10px] text-white/40 font-normal">({ticketCount} x {selectedTier.price} €)</span>
+                  </span>
+                </div>
+
                 {registrationError && (
                   <p className="text-xs text-pink-500 font-semibold">{registrationError}</p>
                 )}
@@ -452,6 +486,12 @@ export default function EventDetailsPage({ params }: PageProps) {
 
                   {!selectedTier.payment_link && !selectedTier.paypal_link && (
                     <p className="text-xs text-center text-white/40 py-2">Aucun moyen de paiement configuré pour ce tarif.</p>
+                  )}
+
+                  {ticketCount > 1 && selectedTier.payment_link && (
+                    <p className="text-[9.5px] text-white/30 leading-relaxed text-center pt-2">
+                      ℹ️ Pour SumUp, veuillez ajuster le montant à <b>{ticketCount * selectedTier.price} €</b> sur la page SumUp.
+                    </p>
                   )}
                 </div>
               </div>

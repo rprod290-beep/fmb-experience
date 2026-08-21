@@ -45,6 +45,9 @@ export interface Buyer {
   ticket_tier_label: string | null;
   status: 'pending' | 'verified' | 'added_close_friends';
   notes: string | null;
+  ticket_count: number;
+  checked_in_count: number;
+  checked_in_at: string | null;
   created_at: string;
 }
 
