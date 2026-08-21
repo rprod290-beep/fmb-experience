@@ -73,27 +73,33 @@ export default function Home() {
   const otherUpcomingEvents = upcomingEvents.length > 1 ? upcomingEvents.slice(1) : [];
 
   const handleEnter = () => {
-    // Play intro music
-    const audio = new Audio('/intro.mp3');
-    audio.loop = true;
-    audio.volume = 0.4;
-    
-    // Fallback to Mixkit Tech House Vibes loop if local intro.mp3 does not exist
-    audio.addEventListener('error', () => {
-      console.log("Local intro.mp3 not found, falling back to CDN track...");
-      audio.src = 'https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3';
-      audio.play().catch(err => console.error("Audio playback blocked:", err));
-    });
-
-    audio.play()
-      .then(() => {
-        setAudioPlaying(true);
-      })
-      .catch(err => {
-        console.error("Audio playback blocked:", err);
+    try {
+      // Play intro music
+      const audio = new Audio('/intro.mp3');
+      audio.loop = true;
+      audio.volume = 0.4;
+      
+      // Fallback to Mixkit Tech House Vibes loop if local intro.mp3 does not exist
+      audio.addEventListener('error', () => {
+        console.log("Local intro.mp3 not found, falling back to CDN track...");
+        audio.src = 'https://assets.mixkit.co/music/preview/mixkit-tech-house-vibes-130.mp3';
+        audio.play().catch(err => console.error("Audio playback blocked:", err));
       });
-    
-    setAudioInstance(audio);
+
+      audio.play()
+        .then(() => {
+          setAudioPlaying(true);
+        })
+        .catch(err => {
+          console.error("Audio playback blocked:", err);
+        });
+      
+      setAudioInstance(audio);
+    } catch (e) {
+      console.error("Erreur d'initialisation de l'audio:", e);
+    }
+
+    // Unconditionally let user enter, even if audio playback fails
     sessionStorage.setItem('fmb_has_entered', 'true');
     setHasEntered(true);
   };
@@ -478,8 +484,8 @@ export default function Home() {
                 FMB<br />
                 <span className="bg-gradient-to-r from-purple-400 via-pink-500 to-orange-400 bg-clip-text text-transparent">EXPÉRIENCE</span>
               </h1>
-              <p className="text-[11px] text-white/40 uppercase tracking-widest font-semibold">
-                Shatta • Rap • Bouyon • Club
+              <p className="text-[11px] text-pink-400/80 uppercase tracking-widest font-black">
+                Une expérience à ne pas rater
               </p>
             </div>
 
