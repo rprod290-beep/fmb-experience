@@ -28,6 +28,7 @@ export default function ThankYouPage({ params }: PageProps) {
   
   const code = searchParams.get('code') || '';
   const tier = searchParams.get('tier') || '';
+  const payLink = searchParams.get('payLink') || '';
 
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
@@ -128,6 +129,19 @@ export default function ThankYouPage({ params }: PageProps) {
               Votre billet pour la catégorie <b>{tier}</b> a été réservé. Suivez les étapes ci-dessous pour débloquer votre accès.
             </p>
           </div>
+
+          {payLink && (
+            <div className="pt-2">
+              <a
+                href={payLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="glow-btn-primary inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-[0_0_25px_rgba(219,39,119,0.35)] transition-all duration-300 animate-pulse active:scale-[0.98]"
+              >
+                💳 CLIQUER ICI POUR PAYER LE BILLET <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+          )}
 
           {/* CODE COMPONENT */}
           <div className="glass p-6 rounded-3xl border border-white/10 space-y-3 shadow-[0_0_30px_rgba(147,51,234,0.1)] relative group">

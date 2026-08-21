@@ -115,13 +115,8 @@ export default function EventDetailsPage({ params }: PageProps) {
           ? selectedTier.paypal_link
           : selectedTier.payment_link;
 
-        if (paymentLink) {
-          // Ouvre le lien de paiement dans un nouvel onglet
-          window.open(paymentLink, '_blank');
-        }
-
-        // 3. Redirige l'onglet actuel vers la page Merci
-        router.push(`/evenements/${event.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(selectedTier.label)}`);
+        // 3. Redirige l'onglet actuel vers la page Merci avec le lien de paiement
+        router.push(`/evenements/${event.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(selectedTier.label)}&payLink=${encodeURIComponent(paymentLink || '')}`);
       } else {
         setRegistrationError(result.error || "Une erreur s'est produite lors de l'enregistrement.");
       }
