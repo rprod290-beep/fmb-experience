@@ -138,7 +138,12 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#050508] text-white">
+    <div className="min-h-screen flex flex-col bg-[#050508] text-white relative overflow-hidden">
+      {/* Dynamic Background Aurora Glow */}
+      <div className="fixed inset-0 -z-30 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-15%] w-[60vw] h-[60vw] rounded-full bg-purple-600/5 blur-[120px] aurora-blob-1"></div>
+        <div className="absolute bottom-[-10%] right-[-15%] w-[60vw] h-[60vw] rounded-full bg-pink-600/5 blur-[120px] aurora-blob-2"></div>
+      </div>
       {/* Header */}
       <header className="border-b border-white/5 bg-black/40 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">

@@ -121,4 +121,37 @@ body {
   animation: portal-exit-logo 2.2s cubic-bezier(0.85, 0, 0.15, 1) forwards;
 }
 
+/* Floating background aurora blobs for premium ambient glow */
+@keyframes float-purple {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  50% {
+    transform: translate(60px, -80px) scale(1.15);
+  }
+  100% {
+    transform: translate(-20px, 30px) scale(0.9);
+  }
+}
+
+@keyframes float-pink {
+  0% {
+    transform: translate(0px, 0px) scale(1.1);
+  }
+  50% {
+    transform: translate(-70px, 50px) scale(0.9);
+  }
+  100% {
+    transform: translate(40px, -40px) scale(1.1);
+  }
+}
+
+.aurora-blob-1 {
+  animation: float-purple 18s infinite alternate ease-in-out;
+}
+
+.aurora-blob-2 {
+  animation: float-pink 22s infinite alternate ease-in-out;
+}
+
 

@@ -165,8 +165,13 @@ export default function EventDetailsPage({ params }: PageProps) {
 
   return (
     <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "EUR" }}>
-      <div className="min-h-screen flex flex-col bg-[#050508] text-white pb-20 relative">
-      {/* Blurred background bleed from flyer colors */}
+      <div className="min-h-screen flex flex-col bg-[#050508] text-white pb-20 relative overflow-hidden">
+        {/* Dynamic Background Aurora Glow */}
+        <div className="fixed inset-0 -z-30 overflow-hidden pointer-events-none">
+          <div className="absolute top-[-10%] left-[-15%] w-[60vw] h-[60vw] rounded-full bg-purple-600/5 blur-[120px] aurora-blob-1"></div>
+          <div className="absolute bottom-[-10%] right-[-15%] w-[60vw] h-[60vw] rounded-full bg-pink-600/5 blur-[120px] aurora-blob-2"></div>
+        </div>
+        {/* Blurred background bleed from flyer colors */}
       {event.cover_image_url && (
         <div className="fixed inset-0 -z-30 pointer-events-none overflow-hidden opacity-[0.08]">
           <img
