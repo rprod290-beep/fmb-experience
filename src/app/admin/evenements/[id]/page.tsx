@@ -314,6 +314,7 @@ export default function EditEventPage({ params }: PageProps) {
           description: tierForm.description.trim() || null,
           price: parseFloat(tierForm.price),
           display_order: parseInt(tierForm.display_order) || 0,
+          max_capacity: parseInt(tierForm.max_capacity) || 100,
           is_active: tierForm.is_active
         })
         .eq('id', editingTierId)
