@@ -377,8 +377,8 @@ export default function EventDetailsPage({ params }: PageProps) {
 
       {/* Buyer Signup Modal */}
       {selectedTier && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
-          <div className="glass max-w-md w-full rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-sm flex justify-center items-start sm:items-center p-4 py-10">
+          <div className="glass max-w-md w-full rounded-3xl border border-white/10 shadow-2xl relative my-auto overflow-hidden">
             <button
               onClick={() => {
                 setSelectedTier(null);
