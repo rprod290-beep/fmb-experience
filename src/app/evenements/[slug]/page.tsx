@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { supabase, Event, DJ, TicketTier } from '@/lib/supabase';
+import { supabase, Event, DJ, TicketTier, Buyer } from '@/lib/supabase';
 import { registerBuyer } from '@/app/actions';
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
@@ -35,6 +35,7 @@ export default function EventDetailsPage({ params }: PageProps) {
   const [event, setEvent] = useState<Event | null>(null);
   const [djs, setDjs] = useState<DJ[]>([]);
   const [ticketTiers, setTicketTiers] = useState<TicketTier[]>([]);
+  const [buyers, setBuyers] = useState<Buyer[]>([]);
   
   const [loading, setLoading] = useState(true);
 
@@ -88,6 +89,18 @@ export default function EventDetailsPage({ params }: PageProps) {
         } else {
           setTicketTiers(tiersData || []);
         }
+
+        // 4. Récupérer les acheteurs pour calculer les places vendues
+        const { data: buyersData, error: buyersError } = await supabase
+          .from('buyers')
+          .select('ticket_tier_label, ticket_count')
+          .eq('event_id', eventData.id);
+
+        if (buyersError) {
+          console.error("Erreur lors de la récupération des acheteurs:", buyersError);
+        } else {
+          setBuyers(buyersData || []);
+        }
       } catch (err) {
         console.error('Erreur:', err);
       } finally {
@@ -99,6 +112,19 @@ export default function EventDetailsPage({ params }: PageProps) {
       fetchEventData();
     }
   }, [slug]);
+
+  // Calcule le nombre de places vendues pour chaque catégorie
+  const getSoldTicketsForTier = (tierLabel: string) => {
+    return buyers
+      .filter(b => b.ticket_tier_label === tierLabel)
+      .reduce((sum, b) => sum + (b.ticket_count || 1), 0);
+  };
+
+  const getRemainingTicketsForTier = (tier: TicketTier) => {
+    const capacity = tier.max_capacity ?? 100;
+    const sold = getSoldTicketsForTier(tier.label);
+    return Math.max(0, capacity - sold);
+  };
 
   const handleRegisterFreeTicket = async () => {
     if (!event || !selectedTier || !buyerName.trim()) {
@@ -348,33 +374,68 @@ export default function EventDetailsPage({ params }: PageProps) {
               <p className="text-white/40 text-center py-6 text-xs">Aucun billet en vente pour le moment.</p>
             ) : (
               <div className="space-y-4">
-                {ticketTiers.map((tier) => (
-                  <div
-                    key={tier.id}
-                    className="p-4 rounded-2xl border border-white/5 bg-white/[0.01] flex flex-col justify-between gap-4 group"
-                  >
-                    <div>
-                      <div className="flex justify-between items-start gap-2">
-                        <span className="font-extrabold text-white text-sm uppercase tracking-wide group-hover:text-pink-400 transition-colors">
-                          {tier.label}
-                        </span>
-                        <span className="font-black text-base text-emerald-400">
-                          {tier.price.toFixed(2)} €
-                        </span>
+                {ticketTiers.map((tier) => {
+                  const remaining = getRemainingTicketsForTier(tier);
+                  const isSoldOut = remaining <= 0;
+
+                  return (
+                    <div
+                      key={tier.id}
+                      className={`p-4 rounded-2xl border border-white/5 bg-white/[0.01] flex flex-col justify-between gap-4 group transition-all duration-300 ${
+                        isSoldOut ? 'opacity-60 hover:opacity-85' : ''
+                      }`}
+                    >
+                      <div>
+                        <div className="flex justify-between items-start gap-2">
+                          <span className="font-extrabold text-white text-sm uppercase tracking-wide group-hover:text-pink-400 transition-colors">
+                            {tier.label}
+                          </span>
+                          <span className="font-black text-base text-emerald-400">
+                            {tier.price.toFixed(2)} €
+                          </span>
+                        </div>
+
+                        {/* Remaining capacity badge */}
+                        <div className="mt-1.5 flex items-center gap-1 text-[9px] font-black uppercase tracking-widest">
+                          {isSoldOut ? (
+                            <span className="text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
+                              🔴 Épuisé
+                            </span>
+                          ) : remaining <= 10 ? (
+                            <span className="text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 animate-pulse">
+                              ⚠️ Plus que {remaining} places !
+                            </span>
+                          ) : (
+                            <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                              🟢 {remaining} places restantes
+                            </span>
+                          )}
+                        </div>
+
+                        {tier.description && (
+                          <p className="text-[11px] text-white/50 mt-2 leading-relaxed">{tier.description}</p>
+                        )}
                       </div>
-                      {tier.description && (
-                        <p className="text-[11px] text-white/50 mt-1 leading-relaxed">{tier.description}</p>
+
+                      {isSoldOut ? (
+                        <button
+                          type="button"
+                          disabled
+                          className="w-full py-2.5 text-xs flex items-center justify-center gap-1.5 uppercase font-bold tracking-wider bg-zinc-800/40 text-zinc-500 border border-zinc-800/50 rounded-xl cursor-not-allowed"
+                        >
+                          Épuisé
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setSelectedTier(tier)}
+                          className="glow-btn-primary w-full py-2.5 text-xs flex items-center justify-center gap-1.5 uppercase font-bold tracking-wider"
+                        >
+                          <Ticket className="w-3.5 h-3.5" /> Acheter
+                        </button>
                       )}
                     </div>
-
-                    <button
-                      onClick={() => setSelectedTier(tier)}
-                      className="glow-btn-primary w-full py-2.5 text-xs flex items-center justify-center gap-1.5 uppercase font-bold tracking-wider"
-                    >
-                      <Ticket className="w-3.5 h-3.5" /> Acheter
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -438,7 +499,10 @@ export default function EventDetailsPage({ params }: PageProps) {
                     onChange={(e) => setTicketCount(Number(e.target.value))}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 transition-colors text-white cursor-pointer"
                   >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => (
+                    {Array.from(
+                      { length: Math.min(10, getRemainingTicketsForTier(selectedTier)) },
+                      (_, i) => i + 1
+                    ).map((num) => (
                       <option key={num} value={num} className="bg-zinc-950 text-white">
                         {num} {num === 1 ? 'place' : 'places'}
                       </option>

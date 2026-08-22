@@ -35,6 +35,7 @@ export interface TicketTier {
   paypal_link?: string | null;
   display_order: number;
   is_active: boolean;
+  max_capacity: number;
 }
 
 export interface Buyer {

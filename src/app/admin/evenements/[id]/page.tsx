@@ -181,6 +181,7 @@ export default function EditEventPage({ params }: PageProps) {
             payment_link: 'https://paypal.com',
             paypal_link: 'https://paypal.com',
             display_order: parseInt(tierForm.display_order) || 0,
+            max_capacity: parseInt(tierForm.max_capacity) || 100,
             is_active: tierForm.is_active
           }])
           .select()
@@ -188,7 +189,7 @@ export default function EditEventPage({ params }: PageProps) {
           
         if (!tierError && tierData) {
           setTicketTiers(prev => [...prev, tierData].sort((a, b) => a.display_order - b.display_order));
-          setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', is_active: true });
+          setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', max_capacity: '100', is_active: true });
         }
       }
 
@@ -290,13 +291,14 @@ export default function EditEventPage({ params }: PageProps) {
       payment_link: tier.payment_link || '',
       paypal_link: tier.paypal_link || '',
       display_order: tier.display_order.toString(),
+      max_capacity: (tier.max_capacity ?? 100).toString(),
       is_active: tier.is_active
     });
   };
 
   const handleCancelEditTier = () => {
     setEditingTierId(null);
-    setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', is_active: true });
+    setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', max_capacity: '100', is_active: true });
   };
 
   const handleAddTier = async (e: React.FormEvent) => {
@@ -323,7 +325,7 @@ export default function EditEventPage({ params }: PageProps) {
       } else if (data) {
         setTicketTiers(prev => prev.map(t => t.id === editingTierId ? data : t).sort((a, b) => a.display_order - b.display_order));
         setEditingTierId(null);
-        setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', is_active: true });
+        setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', max_capacity: '100', is_active: true });
       }
     } else {
       // Mode création
@@ -334,9 +336,10 @@ export default function EditEventPage({ params }: PageProps) {
           label: tierForm.label.trim(),
           description: tierForm.description.trim() || null,
           price: parseFloat(tierForm.price),
-          payment_link: 'https://paypal.com',
-          paypal_link: 'https://paypal.com',
+          payment_link: tierForm.payment_link.trim() || 'https://paypal.com',
+          paypal_link: tierForm.paypal_link.trim() || 'https://paypal.com',
           display_order: parseInt(tierForm.display_order) || 0,
+          max_capacity: parseInt(tierForm.max_capacity) || 100,
           is_active: tierForm.is_active
         }])
         .select()
@@ -346,7 +349,7 @@ export default function EditEventPage({ params }: PageProps) {
         alert(error.message);
       } else if (data) {
         setTicketTiers(prev => [...prev, data].sort((a, b) => a.display_order - b.display_order));
-        setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', is_active: true });
+        setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', max_capacity: '100', is_active: true });
       }
     }
   };
@@ -807,7 +810,19 @@ export default function EditEventPage({ params }: PageProps) {
                 />
               </div>
               {/* Note: SumUp and PayPal links are now automated via the global PayPal integration */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-semibold mb-1 text-zinc-300">Capacité (places)</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    placeholder="100"
+                    value={tierForm.max_capacity}
+                    onChange={(e) => setTierForm({ ...tierForm, max_capacity: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
+                  />
+                </div>
                 <div>
                   <label className="block font-semibold mb-1 text-zinc-300">Ordre d'affichage</label>
                   <input
@@ -866,9 +881,12 @@ export default function EditEventPage({ params }: PageProps) {
                         <span className="font-extrabold text-white">{tier.label}</span>
                         <span className="font-bold text-emerald-400">{tier.price.toFixed(2)} €</span>
                       </div>
+                      <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-semibold mt-1">
+                        <span>Capacité : <b>{tier.max_capacity ?? 100}</b> places</span>
+                      </div>
                       {/* Payment tags removed since PayPal is integrated globally */}
                       {tier.description && (
-                        <p className="text-[10px] text-zinc-500 mt-1">{tier.description}</p>
+                        <p className="text-[10px] text-zinc-500 mt-0.5">{tier.description}</p>
                       )}
                     </div>
 
