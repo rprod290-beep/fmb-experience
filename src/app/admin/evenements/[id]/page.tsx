@@ -8,6 +8,7 @@ import {
   ArrowLeft, 
   Save, 
   Trash2, 
+  Pencil, 
   Plus, 
   Upload, 
   Calendar, 
@@ -54,6 +55,7 @@ export default function EditEventPage({ params }: PageProps) {
     display_order: '0', 
     is_active: true 
   });
+  const [editingTierId, setEditingTierId] = useState<string | null>(null);
 
   useEffect(() => {
     async function checkAuthAndLoad() {
@@ -279,30 +281,73 @@ export default function EditEventPage({ params }: PageProps) {
   // =========================================================================
   // TICKET TIERS (VAGUES)
   // =========================================================================
+  const handleEditTierClick = (tier: any) => {
+    setEditingTierId(tier.id);
+    setTierForm({
+      label: tier.label,
+      description: tier.description || '',
+      price: tier.price.toString(),
+      payment_link: tier.payment_link || '',
+      paypal_link: tier.paypal_link || '',
+      display_order: tier.display_order.toString(),
+      is_active: tier.is_active
+    });
+  };
+
+  const handleCancelEditTier = () => {
+    setEditingTierId(null);
+    setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', is_active: true });
+  };
+
   const handleAddTier = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tierForm.label || !tierForm.price) return;
 
-    const { data, error } = await supabase
-      .from('ticket_tiers')
-      .insert([{
-        event_id: id,
-        label: tierForm.label.trim(),
-        description: tierForm.description.trim() || null,
-        price: parseFloat(tierForm.price),
-        payment_link: 'https://paypal.com',
-        paypal_link: 'https://paypal.com',
-        display_order: parseInt(tierForm.display_order) || 0,
-        is_active: tierForm.is_active
-      }])
-      .select()
-      .single();
+    if (editingTierId) {
+      // Mode modification
+      const { data, error } = await supabase
+        .from('ticket_tiers')
+        .update({
+          label: tierForm.label.trim(),
+          description: tierForm.description.trim() || null,
+          price: parseFloat(tierForm.price),
+          display_order: parseInt(tierForm.display_order) || 0,
+          is_active: tierForm.is_active
+        })
+        .eq('id', editingTierId)
+        .select()
+        .single();
 
-    if (error) {
-      alert(error.message);
-    } else if (data) {
-      setTicketTiers(prev => [...prev, data].sort((a, b) => a.display_order - b.display_order));
-      setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', is_active: true });
+      if (error) {
+        alert(error.message);
+      } else if (data) {
+        setTicketTiers(prev => prev.map(t => t.id === editingTierId ? data : t).sort((a, b) => a.display_order - b.display_order));
+        setEditingTierId(null);
+        setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', is_active: true });
+      }
+    } else {
+      // Mode création
+      const { data, error } = await supabase
+        .from('ticket_tiers')
+        .insert([{
+          event_id: id,
+          label: tierForm.label.trim(),
+          description: tierForm.description.trim() || null,
+          price: parseFloat(tierForm.price),
+          payment_link: 'https://paypal.com',
+          paypal_link: 'https://paypal.com',
+          display_order: parseInt(tierForm.display_order) || 0,
+          is_active: tierForm.is_active
+        }])
+        .select()
+        .single();
+
+      if (error) {
+        alert(error.message);
+      } else if (data) {
+        setTicketTiers(prev => [...prev, data].sort((a, b) => a.display_order - b.display_order));
+        setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', is_active: true });
+      }
     }
   };
 
@@ -783,12 +828,30 @@ export default function EditEventPage({ params }: PageProps) {
                   <label htmlFor="is_active" className="font-semibold cursor-pointer text-zinc-300">Activer ce tarif</label>
                 </div>
               </div>
-              <button
-                type="submit"
-                className="w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs"
-              >
-                <Plus className="w-3.5 h-3.5" /> Ajouter la Catégorie
-              </button>
+              {editingTierId ? (
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs shadow-md"
+                  >
+                    <Save className="w-3.5 h-3.5" /> Modifier le Tarif
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelEditTier}
+                    className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white font-bold rounded-lg transition-colors text-xs"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="submit"
+                  className="w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Ajouter la Catégorie
+                </button>
+              )}
             </form>
 
             {/* Ticket tiers list */}
@@ -821,6 +884,14 @@ export default function EditEventPage({ params }: PageProps) {
                         {tier.is_active ? 'Actif' : 'Inactif'}
                       </button>
                       <button
+                        type="button"
+                        onClick={() => handleEditTierClick(tier)}
+                        className="p-1.5 text-zinc-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleDeleteTier(tier.id)}
                         className="p-1.5 text-red-400 hover:bg-red-500/15 rounded-lg transition-colors"
                       >
