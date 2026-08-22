@@ -213,33 +213,38 @@ export default function ThankYouPage({ params }: PageProps) {
           </div>
 
           {/* Action buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {/* WhatsApp */}
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.25)] transition-all duration-300 active:scale-[0.98]"
+          <div className="flex flex-col gap-4 items-center">
+            <Link
+              href={`/evenements/${event.slug}`}
+              className="flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:from-purple-500 hover:via-pink-500 hover:to-orange-400 text-white font-extrabold text-xs sm:text-sm uppercase tracking-widest shadow-[0_0_20px_rgba(219,39,119,0.25)] transition-all duration-300 active:scale-[0.98] w-full sm:w-auto"
             >
-              <MessageCircle className="w-4 h-4 fill-white text-emerald-600" /> Envoyer sur WhatsApp <ExternalLink className="w-3.5 h-3.5" />
-            </a>
+              <ArrowLeft className="w-4 h-4" /> Voir le Lieu Secret / Retour
+            </Link>
 
-            {/* Instagram */}
-            {event.instagram_url && (
+            <div className="flex items-center gap-4 text-xs text-white/50 mt-2">
+              <span>Besoin d'aide ?</span>
               <a
-                href={event.instagram_url}
+                href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-extrabold text-sm uppercase tracking-widest transition-all duration-300 active:scale-[0.98]"
+                className="text-pink-400 hover:underline flex items-center gap-1"
               >
-                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="text-pink-400">
-                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                </svg>
-                Envoyer sur Instagram <ExternalLink className="w-3.5 h-3.5" />
+                WhatsApp
               </a>
-            )}
+              {event.instagram_url && (
+                <>
+                  <span>•</span>
+                  <a
+                    href={event.instagram_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-pink-400 hover:underline flex items-center gap-1"
+                  >
+                    Instagram
+                  </a>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="pt-4 flex flex-wrap gap-6 justify-center text-xs text-white/40">
