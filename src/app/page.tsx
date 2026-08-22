@@ -18,15 +18,11 @@ export default function Home() {
   const faqItems = [
     {
       q: "Comment recevoir l'adresse secrète ?",
-      a: "Une fois votre billet réservé, vous obtenez un code unique à 8 caractères. Dès que votre paiement SumUp est vérifié par nos équipes, votre statut est activé. Il vous suffit alors d'entrer ce code dans la section 'Lieu' de l'événement pour dévoiler l'adresse exacte en direct sur votre écran."
+      a: "Une fois votre billet réservé et votre paiement PayPal effectué, votre code unique est activé automatiquement. Il vous suffit alors d'entrer ce code dans la section 'Lieu' de l'événement pour dévoiler l'adresse exacte en direct sur votre écran."
     },
     {
-      q: "Quels sont les genres musicaux de l'expérience ?",
-      a: "Nos événements célèbrent la culture et les rythmes urbains et caribéens : Rap, Shatta, Dancehall, Bouyon et R&B. Chaque line-up est soigneusement construite avec des artistes reconnus."
-    },
-    {
-      q: "Le paiement sur SumUp est-il sécurisé ?",
-      a: "Oui, à 100%. Les transactions s'effectuent directement sur la plateforme de paiement sécurisée SumUp. Vos données bancaires sont cryptées et ne transitent jamais par notre site."
+      q: "Le paiement en ligne est-il sécurisé ?",
+      a: "Oui, à 100%. Les transactions s'effectuent directement via le protocole sécurisé de PayPal. Vos données bancaires sont cryptées de bout en bout et ne transitent jamais par notre site."
     },
     {
       q: "Puis-je acheter mon billet directement sur place ?",
@@ -327,7 +323,7 @@ export default function Home() {
                   </div>
                   <h4 className="font-extrabold text-white text-base uppercase tracking-wider">Musique D'Élite</h4>
                   <p className="text-white/40 text-xs leading-relaxed">
-                    Vibrez au son d'une sélection musicale pointue mêlant Rap, Shatta, Dancehall, Bouyon et R&B, distillée par des line-ups de DJs de premier plan et des invités de marque.
+                    Vibrez au son d'une sélection musicale pointue distillée par des line-ups de DJs de premier plan et des invités de marque.
                   </p>
                 </div>
 

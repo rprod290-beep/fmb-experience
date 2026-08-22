@@ -542,10 +542,10 @@ export default function EditEventPage({ params }: PageProps) {
             </div>
 
             <div>
-              <label className="block font-semibold mb-1.5 text-zinc-300">Sous-titres / Styles musicaux</label>
+              <label className="block font-semibold mb-1.5 text-zinc-300">Sous-titre / Accroche</label>
               <input
                 type="text"
-                placeholder="Ex: Rap / Shatta / Dancehall / Bouyon"
+                placeholder="Ex: L'expérience exclusive"
                 value={event.subtitle || ''}
                 onChange={(e) => setEvent({ ...event, subtitle: e.target.value })}
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-purple-500"
@@ -928,7 +928,7 @@ export default function EditEventPage({ params }: PageProps) {
         {/* 4. BUYERS TABLE (VERIFICATION) */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-6">
           <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-800 pb-3 flex items-center gap-2">
-            <Users className="w-4 h-4 text-purple-400" /> 4. Acheteurs à vérifier (SumUp)
+            <Users className="w-4 h-4 text-purple-400" /> 4. Liste des Acheteurs & Réservations
           </h3>
 
           {buyers.length === 0 ? (

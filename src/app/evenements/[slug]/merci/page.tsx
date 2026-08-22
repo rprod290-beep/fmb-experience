@@ -197,20 +197,17 @@ export default function ThankYouPage({ params }: PageProps) {
           {/* Validation Instructions */}
           <div className="glass p-6 rounded-3xl border border-white/5 text-left space-y-4 text-xs leading-relaxed text-white/80">
             <h3 className="font-bold text-sm text-white uppercase tracking-wider border-b border-white/5 pb-2">
-              🚨 Comment valider votre place ?
+              ℹ️ Comment accéder à l'événement ?
             </h3>
             <ol className="list-decimal list-inside space-y-3">
               <li>
-                Effectuez le paiement sur la page SumUp ouverte dans l'autre onglet (si vous ne l'avez pas fait).
+                Votre réservation est <b>déjà validée</b> grâce à votre paiement sécurisé.
               </li>
               <li>
-                Prenez une <b>capture d'écran de votre reçu de paiement</b>.
+                Conservez précieusement votre <b>Code Unique ({code})</b> ou faites une capture d'écran de cette page.
               </li>
               <li>
-                Envoyez-nous la capture d'écran accompagnée de votre <b>Code Unique ({code})</b> via Instagram ou WhatsApp ci-dessous.
-              </li>
-              <li>
-                Dès validation par l'organisateur, vous pourrez entrer votre code sur la page de l'événement pour débloquer la <b>localisation exacte</b>.
+                Retournez sur la page de l'événement et insérez votre Code Unique dans la section <b>« Lieu Secret »</b> pour dévoiler instantanément la localisation exacte !
               </li>
             </ol>
           </div>

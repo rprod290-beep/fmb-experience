@@ -82,7 +82,7 @@ export default function AdminDashboardPage() {
         title: 'Nouvel Événement (Brouillon)',
         slug: `brouillon-${timestamp}`,
         event_date: nextWeek,
-        subtitle: 'Rap / Shatta / Dancehall',
+        subtitle: 'L\'expérience exclusive',
         description: 'Description de la soirée...',
         contact_email: 'contact@fmb-experience.com',
         whatsapp_number: '33', // code international standard de base
