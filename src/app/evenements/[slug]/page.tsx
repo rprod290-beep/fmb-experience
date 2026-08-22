@@ -100,7 +100,7 @@ export default function EventDetailsPage({ params }: PageProps) {
     }
   }, [slug]);
 
-  const handleRegisterAndCheckout = async (paymentMethod: 'sumup' | 'paypal') => {
+  const handleRegisterFreeTicket = async () => {
     if (!event || !selectedTier || !buyerName.trim()) {
       setRegistrationError("Veuillez saisir votre nom.");
       return;
@@ -110,25 +110,15 @@ export default function EventDetailsPage({ params }: PageProps) {
     setRegistrationError('');
 
     try {
-      // 1. Enregistre le buyer en 'pending' et obtient le code unique avec ticketCount
-      const result = await registerBuyer(event.id, buyerName.trim(), selectedTier.label, ticketCount);
+      const result = await registerBuyer(event.id, buyerName.trim(), selectedTier.label, ticketCount, 'verified');
 
       if (result.success && result.confirmationCode) {
-        // 2. Détermine le lien de paiement approprié avec montant dynamique si PayPal
-        let paymentLink = '';
-        const totalPrice = ticketCount * selectedTier.price;
-
-        if (paymentMethod === 'paypal' && selectedTier.paypal_link) {
-          const basePaypal = selectedTier.paypal_link.trim();
-          paymentLink = basePaypal.endsWith('/') 
-            ? `${basePaypal}${totalPrice}` 
-            : `${basePaypal}/${totalPrice}`;
-        } else {
-          paymentLink = selectedTier.payment_link;
-        }
-
-        // 3. Redirige l'onglet actuel vers la page Merci avec le lien de paiement et quantité
-        router.push(`/evenements/${event.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(selectedTier.label)}&payLink=${encodeURIComponent(paymentLink || '')}&quantity=${ticketCount}`);
+        // Reset state
+        setSelectedTier(null);
+        setBuyerName('');
+        setTicketCount(1);
+        // Redirect to success page
+        router.push(`/evenements/${event.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(selectedTier.label)}&quantity=${ticketCount}`);
       } else {
         setRegistrationError(result.error || "Une erreur s'est produite lors de l'enregistrement.");
       }
@@ -462,21 +452,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                 )}
 
                 <div className="space-y-3 pt-2">
-                  {/* SumUp Payment Link */}
-                  {selectedTier.payment_link && (
-                    <button
-                      type="button"
-                      disabled={registering}
-                      onClick={() => handleRegisterAndCheckout('sumup')}
-                      className="glow-btn-primary w-full py-3.5 text-xs flex items-center justify-center gap-1.5 uppercase font-bold tracking-widest"
-                    >
-                      {registering ? 'Création...' : selectedTier.paypal_link ? '💳 Payer par Carte (SumUp)' : 'Continuer vers le paiement'}
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-
-                  {/* PayPal Live Checkout SDK Button */}
-                  {selectedTier.paypal_link && (
+                  {selectedTier.price > 0 ? (
                     <div className="pt-2">
                       <PayPalButtons
                         style={{ layout: "vertical", shape: "rect", label: "pay" }}
@@ -530,16 +506,15 @@ export default function EventDetailsPage({ params }: PageProps) {
                         }}
                       />
                     </div>
-                  )}
-
-                  {!selectedTier.payment_link && !selectedTier.paypal_link && (
-                    <p className="text-xs text-center text-white/40 py-2">Aucun moyen de paiement configuré pour ce tarif.</p>
-                  )}
-
-                  {ticketCount > 1 && selectedTier.payment_link && (
-                    <p className="text-[9.5px] text-white/30 leading-relaxed text-center pt-2">
-                      ℹ️ Pour SumUp, veuillez ajuster le montant à <b>{ticketCount * selectedTier.price} €</b> sur la page SumUp.
-                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={registering}
+                      onClick={handleRegisterFreeTicket}
+                      className="glow-btn-primary w-full py-3.5 text-xs flex items-center justify-center gap-1.5 uppercase font-bold tracking-widest"
+                    >
+                      {registering ? 'Création...' : 'Réserver ma place gratuite'}
+                    </button>
                   )}
                 </div>
               </div>

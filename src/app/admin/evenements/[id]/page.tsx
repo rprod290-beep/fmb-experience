@@ -168,7 +168,7 @@ export default function EditEventPage({ params }: PageProps) {
       }
 
       // 3. Si l'utilisateur a saisi un Tarif mais a oublié de cliquer sur le bouton d'ajout
-      if (tierForm.label.trim() && tierForm.price && (tierForm.payment_link.trim() || tierForm.paypal_link.trim())) {
+      if (tierForm.label.trim() && tierForm.price) {
         const { data: tierData, error: tierError } = await supabase
           .from('ticket_tiers')
           .insert([{
@@ -176,8 +176,8 @@ export default function EditEventPage({ params }: PageProps) {
             label: tierForm.label.trim(),
             description: tierForm.description.trim() || null,
             price: parseFloat(tierForm.price),
-            payment_link: tierForm.payment_link.trim(),
-            paypal_link: tierForm.paypal_link.trim() || null,
+            payment_link: 'https://paypal.com',
+            paypal_link: 'https://paypal.com',
             display_order: parseInt(tierForm.display_order) || 0,
             is_active: tierForm.is_active
           }])
@@ -281,7 +281,7 @@ export default function EditEventPage({ params }: PageProps) {
   // =========================================================================
   const handleAddTier = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!tierForm.label || !tierForm.price || (!tierForm.payment_link && !tierForm.paypal_link)) return;
+    if (!tierForm.label || !tierForm.price) return;
 
     const { data, error } = await supabase
       .from('ticket_tiers')
@@ -290,8 +290,8 @@ export default function EditEventPage({ params }: PageProps) {
         label: tierForm.label.trim(),
         description: tierForm.description.trim() || null,
         price: parseFloat(tierForm.price),
-        payment_link: tierForm.payment_link.trim(),
-        paypal_link: tierForm.paypal_link.trim() || null,
+        payment_link: 'https://paypal.com',
+        paypal_link: 'https://paypal.com',
         display_order: parseInt(tierForm.display_order) || 0,
         is_active: tierForm.is_active
       }])
@@ -721,28 +721,7 @@ export default function EditEventPage({ params }: PageProps) {
                   className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold mb-1 text-zinc-300">Lien de paiement SumUp</label>
-                  <input
-                    type="url"
-                    placeholder="https://sumup.link/..."
-                    value={tierForm.payment_link}
-                    onChange={(e) => setTierForm({ ...tierForm, payment_link: e.target.value })}
-                    className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1 text-zinc-300">Lien PayPal (Optionnel)</label>
-                  <input
-                    type="url"
-                    placeholder="https://paypal.me/..."
-                    value={tierForm.paypal_link}
-                    onChange={(e) => setTierForm({ ...tierForm, paypal_link: e.target.value })}
-                    className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
-                  />
-                </div>
-              </div>
+              {/* Note: SumUp and PayPal links are now automated via the global PayPal integration */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold mb-1 text-zinc-300">Ordre d'affichage</label>
@@ -784,14 +763,7 @@ export default function EditEventPage({ params }: PageProps) {
                         <span className="font-extrabold text-white">{tier.label}</span>
                         <span className="font-bold text-emerald-400">{tier.price} €</span>
                       </div>
-                      <div className="flex items-center gap-1.5 mt-1">
-                        {tier.payment_link && (
-                          <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-blue-500/10 text-blue-400 border border-blue-500/10">SumUp</span>
-                        )}
-                        {tier.paypal_link && (
-                          <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase bg-yellow-500/10 text-yellow-400 border border-yellow-500/10">PayPal</span>
-                        )}
-                      </div>
+                      {/* Payment tags removed since PayPal is integrated globally */}
                       {tier.description && (
                         <p className="text-[10px] text-zinc-500 mt-1">{tier.description}</p>
                       )}
