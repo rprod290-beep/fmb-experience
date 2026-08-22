@@ -233,10 +233,6 @@ export default function EventDetailsPage({ params }: PageProps) {
         </div>
 
         <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-12">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-purple-500/10 text-purple-400 border border-purple-500/20 mb-4 uppercase tracking-widest">
-            🎵 concepto
-          </span>
-          
           <h1 className="text-4xl sm:text-6xl font-black uppercase tracking-tight text-white mb-2 leading-none neon-text-purple">
             {event.title}
           </h1>
