@@ -168,8 +168,9 @@ export default function EventDetailsPage({ params }: PageProps) {
       <div className="min-h-screen flex flex-col bg-[#050508] text-white pb-20 relative overflow-hidden">
         {/* Dynamic Background Aurora Glow */}
         <div className="fixed inset-0 -z-30 overflow-hidden pointer-events-none">
-          <div className="absolute top-[-10%] left-[-15%] w-[60vw] h-[60vw] rounded-full bg-purple-600/5 blur-[120px] aurora-blob-1"></div>
-          <div className="absolute bottom-[-10%] right-[-15%] w-[60vw] h-[60vw] rounded-full bg-pink-600/5 blur-[120px] aurora-blob-2"></div>
+          <div className="absolute top-[-10%] left-[-15%] w-[75vw] h-[75vw] rounded-full bg-purple-600/12 blur-[130px] aurora-blob-1"></div>
+          <div className="absolute bottom-[-15%] right-[-15%] w-[75vw] h-[75vw] rounded-full bg-pink-500/12 blur-[130px] aurora-blob-2"></div>
+          <div className="absolute top-[35%] right-[10%] w-[40vw] h-[40vw] rounded-full bg-orange-500/8 blur-[100px] aurora-blob-1"></div>
         </div>
         {/* Blurred background bleed from flyer colors */}
       {event.cover_image_url && (

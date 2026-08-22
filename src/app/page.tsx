@@ -141,14 +141,15 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-[#050508] text-white relative overflow-hidden">
       {/* Dynamic Background Aurora Glow */}
       <div className="fixed inset-0 -z-30 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-15%] w-[60vw] h-[60vw] rounded-full bg-purple-600/5 blur-[120px] aurora-blob-1"></div>
-        <div className="absolute bottom-[-10%] right-[-15%] w-[60vw] h-[60vw] rounded-full bg-pink-600/5 blur-[120px] aurora-blob-2"></div>
+        <div className="absolute top-[-10%] left-[-15%] w-[75vw] h-[75vw] rounded-full bg-purple-600/12 blur-[130px] aurora-blob-1"></div>
+        <div className="absolute bottom-[-15%] right-[-15%] w-[75vw] h-[75vw] rounded-full bg-pink-500/12 blur-[130px] aurora-blob-2"></div>
+        <div className="absolute top-[35%] right-[10%] w-[40vw] h-[40vw] rounded-full bg-orange-500/8 blur-[100px] aurora-blob-1"></div>
       </div>
       {/* Header */}
       <header className="border-b border-white/5 bg-black/40 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 group">
-            <span className="font-extrabold text-2xl tracking-widest bg-gradient-to-r from-purple-400 via-pink-500 to-orange-400 bg-clip-text text-transparent group-hover:opacity-90 transition-opacity">
+            <span className="font-black text-2xl tracking-widest bg-gradient-to-r from-purple-400 via-pink-500 to-orange-400 bg-clip-text text-transparent group-hover:brightness-110 transition-all duration-300 drop-shadow-[0_0_15px_rgba(219,39,119,0.35)]">
               FMB EXPÉRIENCE
             </span>
           </Link>
@@ -182,7 +183,7 @@ export default function Home() {
         ) : (
           <>
             {/* 1. FEATURED EVENT (A LA UNE) */}
-            <section className="relative rounded-3xl overflow-hidden glass border border-white/10 shadow-[0_0_50px_rgba(147,51,234,0.15)] group animate-fade-in">
+            <section className="relative rounded-3xl overflow-hidden glass border border-white/10 hover:border-pink-500/30 shadow-[0_0_40px_rgba(147,51,234,0.1)] hover:shadow-[0_0_60px_rgba(219,39,119,0.3)] transition-all duration-500 group animate-fade-in">
               <div className="absolute inset-0 -z-10">
                 {featuredEvent.cover_image_url ? (
                   <img
