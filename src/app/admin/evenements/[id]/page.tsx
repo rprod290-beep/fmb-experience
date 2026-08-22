@@ -364,6 +364,46 @@ export default function EditEventPage({ params }: PageProps) {
     }
   };
 
+  const handleUpdateBuyerName = async (buyerId: string, name: string) => {
+    const { error } = await supabase
+      .from('buyers')
+      .update({ name_or_pseudo: name })
+      .eq('id', buyerId);
+
+    if (error) {
+      console.error(error);
+    } else {
+      setBuyers(prev => prev.map(b => b.id === buyerId ? { ...b, name_or_pseudo: name } : b));
+    }
+  };
+
+  const handleUpdateBuyerTier = async (buyerId: string, tierLabel: string) => {
+    const { error } = await supabase
+      .from('buyers')
+      .update({ ticket_tier_label: tierLabel })
+      .eq('id', buyerId);
+
+    if (error) {
+      console.error(error);
+    } else {
+      setBuyers(prev => prev.map(b => b.id === buyerId ? { ...b, ticket_tier_label: tierLabel } : b));
+    }
+  };
+
+  const handleUpdateBuyerTicketCount = async (buyerId: string, count: number) => {
+    if (count < 1) return;
+    const { error } = await supabase
+      .from('buyers')
+      .update({ ticket_count: count })
+      .eq('id', buyerId);
+
+    if (error) {
+      console.error(error);
+    } else {
+      setBuyers(prev => prev.map(b => b.id === buyerId ? { ...b, ticket_count: count } : b));
+    }
+  };
+
   const handleDeleteBuyer = async (buyerId: string) => {
     if (!confirm("Supprimer cet acheteur de la liste ?")) return;
 
@@ -828,16 +868,44 @@ export default function EditEventPage({ params }: PageProps) {
                           {buyer.confirmation_code}
                         </td>
                         {/* Name */}
-                        <td className="px-6 py-4 font-semibold text-white">
-                          {buyer.name_or_pseudo || '—'}
+                        <td className="px-6 py-4">
+                          <input
+                            type="text"
+                            value={buyer.name_or_pseudo || ''}
+                            onChange={(e) => handleUpdateBuyerName(buyer.id, e.target.value)}
+                            className="bg-transparent border-b border-transparent hover:border-zinc-800 focus:border-purple-500 focus:outline-none py-1 text-white font-semibold w-full text-xs"
+                          />
                         </td>
                         {/* Tier Label */}
-                        <td className="px-6 py-4 text-pink-400 font-semibold">
-                          {buyer.ticket_tier_label || '—'}
+                        <td className="px-6 py-4">
+                          <select
+                            value={buyer.ticket_tier_label || ''}
+                            onChange={(e) => handleUpdateBuyerTier(buyer.id, e.target.value)}
+                            className="bg-transparent border-b border-transparent hover:border-zinc-850 focus:border-purple-500 focus:outline-none py-1 text-pink-400 font-semibold cursor-pointer w-full text-xs"
+                          >
+                            <option value="" className="bg-zinc-950 text-white">—</option>
+                            {ticketTiers.map(tier => (
+                              <option key={tier.id} value={tier.label} className="bg-zinc-950 text-white">
+                                {tier.label} ({tier.price} €)
+                              </option>
+                            ))}
+                          </select>
                         </td>
                         {/* Places Count */}
-                        <td className="px-6 py-4 text-zinc-300 font-semibold">
-                          {buyer.ticket_count || 1} <span className="text-[10px] text-zinc-500 font-normal">{buyer.checked_in_count > 0 ? `(${buyer.checked_in_count} entrés)` : '(aucun entré)'}</span>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="1"
+                              max="100"
+                              value={buyer.ticket_count || 1}
+                              onChange={(e) => handleUpdateBuyerTicketCount(buyer.id, Number(e.target.value))}
+                              className="bg-transparent border-b border-transparent hover:border-zinc-800 focus:border-purple-500 focus:outline-none py-1 text-zinc-300 font-semibold w-12 text-xs"
+                            />
+                            <span className="text-[10px] text-zinc-500 font-normal whitespace-nowrap">
+                              {buyer.checked_in_count > 0 ? `(${buyer.checked_in_count} entrés)` : '(aucun entré)'}
+                            </span>
+                          </div>
                         </td>
                         {/* Status Select */}
                         <td className="px-6 py-4">
