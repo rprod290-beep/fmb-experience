@@ -164,7 +164,7 @@ export default function Home() {
       </header>
 
       {/* Main Grid Content */}
-      <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-16">
+      <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-10 sm:space-y-16">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-32 gap-4">
             <div className="w-12 h-12 rounded-full border-2 border-pink-500/20 border-t-pink-500 animate-spin"></div>
@@ -199,18 +199,18 @@ export default function Home() {
               </div>
 
               {/* Card Details */}
-              <div className="p-8 sm:p-12 lg:p-16 flex flex-col justify-end min-h-[55vh] md:min-h-[60vh] max-w-3xl space-y-6">
+              <div className="p-6 sm:p-12 lg:p-16 flex flex-col justify-end min-h-[50vh] sm:min-h-[55vh] md:min-h-[60vh] max-w-3xl space-y-4 sm:space-y-6">
                 <div>
                   <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-pink-400 border border-pink-500/30 uppercase tracking-widest mb-4">
                     🔥 Prochain Événement
                   </span>
                   
-                  <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-white mb-2 leading-none">
+                  <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-white mb-2 leading-none">
                     {featuredEvent.title}
                   </h2>
                   
                   {featuredEvent.subtitle && (
-                    <p className="text-orange-400 font-bold text-sm sm:text-lg tracking-wider mb-4 uppercase">
+                    <p className="text-orange-400 font-bold text-xs sm:text-lg tracking-wider mb-3 sm:mb-4 uppercase">
                       {featuredEvent.subtitle}
                     </p>
                   )}
@@ -227,10 +227,10 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="pt-4">
+                <div className="pt-2 sm:pt-4">
                   <Link
                     href={`/evenements/${featuredEvent.slug}`}
-                    className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:from-purple-500 hover:via-pink-500 hover:to-orange-400 text-white font-extrabold text-sm uppercase tracking-widest shadow-[0_0_30px_rgba(219,39,119,0.35)] hover:shadow-[0_0_40px_rgba(219,39,119,0.5)] transition-all duration-300 active:scale-[0.98]"
+                    className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3.5 sm:px-8 sm:py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:from-purple-500 hover:via-pink-500 hover:to-orange-400 text-white font-extrabold text-xs sm:text-sm uppercase tracking-widest shadow-[0_0_30px_rgba(219,39,119,0.35)] hover:shadow-[0_0_40px_rgba(219,39,119,0.5)] transition-all duration-300 active:scale-[0.98]"
                   >
                     Voir l'événement <ArrowRight className="w-4 h-4" />
                   </Link>
@@ -442,7 +442,7 @@ export default function Home() {
 
       {/* Floating Audio Controller */}
       {hasEntered === 'entered' && audioInstance && (
-        <div className="fixed bottom-6 right-6 z-50 animate-fade-in">
+        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 animate-fade-in">
           <button
             onClick={() => {
               if (audioPlaying) {

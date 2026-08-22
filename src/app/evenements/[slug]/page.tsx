@@ -261,14 +261,14 @@ export default function EventDetailsPage({ params }: PageProps) {
       </div>
 
       {/* Main Details Body */}
-      <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-8 mt-10">
+      <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 mt-6 md:mt-10">
         
         {/* Left pane: Lineup & Infos */}
         <div className="lg:col-span-2 space-y-8">
           
           {/* Line-up DJs */}
           {djs.length > 0 && (
-            <div className="glass p-6 rounded-3xl border border-white/5 space-y-6">
+            <div className="glass p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/5 space-y-6">
               <h3 className="text-lg font-black uppercase tracking-wider text-white border-b border-white/5 pb-3">
                 🎧 Line-up
               </h3>
@@ -315,7 +315,7 @@ export default function EventDetailsPage({ params }: PageProps) {
 
           {/* Description */}
           {event.description && (
-            <div className="glass p-6 rounded-3xl border border-white/5 space-y-4">
+            <div className="glass p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/5 space-y-4">
               <h3 className="text-lg font-black uppercase tracking-wider text-white border-b border-white/5 pb-3">
                 📖 Description
               </h3>
@@ -326,7 +326,7 @@ export default function EventDetailsPage({ params }: PageProps) {
           )}
 
           {/* Infos Pratiques */}
-          <div className="glass p-6 rounded-3xl border border-white/5 space-y-4">
+          <div className="glass p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/5 space-y-4">
             <h3 className="text-lg font-black uppercase tracking-wider text-white border-b border-white/5 pb-3">
               📍 Infos Pratiques
             </h3>
@@ -360,7 +360,7 @@ export default function EventDetailsPage({ params }: PageProps) {
             </div>
           )}
 
-          <div className="glass p-6 rounded-3xl border border-white/5 space-y-4">
+          <div className="glass p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/5 space-y-4">
             <div className="flex justify-between items-center border-b border-white/5 pb-3">
               <h3 className="text-lg font-black uppercase tracking-wider text-white">
                 🎟️ Tickets
@@ -458,7 +458,7 @@ export default function EventDetailsPage({ params }: PageProps) {
               <X className="w-5 h-5" />
             </button>
 
-            <div className="p-6 sm:p-8 space-y-6">
+            <div className="p-5 sm:p-8 space-y-5 sm:space-y-6">
               <div>
                 <span className="text-[10px] font-bold text-pink-500 uppercase tracking-widest bg-pink-500/10 px-2 py-0.5 rounded border border-pink-500/20">
                   Réservation
@@ -482,7 +482,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                     placeholder="Ex: David Laroche"
                     value={buyerName}
                     onChange={(e) => setBuyerName(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 transition-colors text-white"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-base sm:text-sm focus:outline-none focus:border-purple-500 transition-colors text-white"
                   />
                   <p className="text-[9px] text-white/30 mt-1.5 flex items-start gap-1">
                     <Info className="w-3.5 h-3.5 flex-shrink-0" />
@@ -497,7 +497,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                   <select
                     value={ticketCount}
                     onChange={(e) => setTicketCount(Number(e.target.value))}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-purple-500 transition-colors text-white cursor-pointer"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-base sm:text-sm focus:outline-none focus:border-purple-500 transition-colors text-white cursor-pointer"
                   >
                     {Array.from(
                       { length: Math.min(10, getRemainingTicketsForTier(selectedTier)) },
