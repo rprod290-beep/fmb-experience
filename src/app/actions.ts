@@ -52,7 +52,8 @@ export async function registerBuyer(
   eventId: string,
   nameOrPseudo: string,
   ticketTierLabel: string,
-  ticketCount: number = 1
+  ticketCount: number = 1,
+  initialStatus: 'pending' | 'verified' = 'pending'
 ): Promise<{ success: boolean; confirmationCode?: string; error?: string }> {
   try {
     if (!eventId || !nameOrPseudo || !ticketTierLabel) {
@@ -68,7 +69,7 @@ export async function registerBuyer(
           event_id: eventId,
           name_or_pseudo: nameOrPseudo.trim(),
           ticket_tier_label: ticketTierLabel,
-          status: 'pending',
+          status: initialStatus,
           ticket_count: ticketCount,
         },
       ])

@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { supabase, Event, DJ, TicketTier } from '@/lib/supabase';
 import { registerBuyer } from '@/app/actions';
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+
+const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || 'BAAzIRcORaDPy0QiXRb9We8sFVS2MhA3BlKS5JsgjS8Sen5EuZPENuMmsserQ3-ift8uqgMT1qX9zx-O6M';
 import { 
   Calendar, 
   MapPin, 
@@ -171,7 +174,8 @@ export default function EventDetailsPage({ params }: PageProps) {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#050508] text-white pb-20 relative">
+    <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "EUR" }}>
+      <div className="min-h-screen flex flex-col bg-[#050508] text-white pb-20 relative">
       {/* Blurred background bleed from flyer colors */}
       {event.cover_image_url && (
         <div className="fixed inset-0 -z-30 pointer-events-none overflow-hidden opacity-[0.08]">
@@ -471,17 +475,61 @@ export default function EventDetailsPage({ params }: PageProps) {
                     </button>
                   )}
 
-                  {/* PayPal Payment Link */}
+                  {/* PayPal Live Checkout SDK Button */}
                   {selectedTier.paypal_link && (
-                    <button
-                      type="button"
-                      disabled={registering}
-                      onClick={() => handleRegisterAndCheckout('paypal')}
-                      className="w-full py-3.5 text-xs flex items-center justify-center gap-1.5 uppercase font-bold tracking-widest bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-xl transition-all duration-300 shadow-[0_0_15px_rgba(234,179,8,0.05)]"
-                    >
-                      {registering ? 'Création...' : selectedTier.payment_link ? '🟡 Payer par PayPal' : 'Continuer vers le paiement'}
-                      <ExternalLink className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="pt-2">
+                      <PayPalButtons
+                        style={{ layout: "vertical", shape: "rect", label: "pay" }}
+                        createOrder={(data, actions) => {
+                          return actions.order.create({
+                            purchase_units: [{
+                              amount: {
+                                currency_code: "EUR",
+                                value: (ticketCount * selectedTier.price).toString()
+                              },
+                              description: `Billet ${selectedTier.label} - ${ticketCount} place(s) pour FMB Experience`
+                            }]
+                          });
+                        }}
+                        onClick={(data, actions) => {
+                          if (!buyerName.trim()) {
+                            setRegistrationError("Veuillez saisir votre nom complet avant de procéder au paiement.");
+                            return actions.reject();
+                          }
+                          setRegistrationError('');
+                          return actions.resolve();
+                        }}
+                        onApprove={async (data, actions) => {
+                          if (!actions.order) return;
+                          setRegistering(true);
+                          try {
+                            const details = await actions.order.capture();
+                            // Payment is captured successfully!
+                            // Register the buyer with 'verified' (paid) status directly
+                            const result = await registerBuyer(event!.id, buyerName.trim(), selectedTier.label, ticketCount, 'verified');
+                            if (result.success && result.confirmationCode) {
+                              // Reset state
+                              setSelectedTier(null);
+                              setBuyerName('');
+                              setTicketCount(1);
+                              // Redirect to success page
+                              router.push(`/evenements/${event!.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(selectedTier.label)}&quantity=${ticketCount}`);
+                            } else {
+                              setRegistrationError(result.error || "Paiement réussi mais échec de l'enregistrement. Contactez le support.");
+                            }
+                          } catch (err) {
+                            console.error(err);
+                            setRegistrationError("Une erreur s'est produite lors de la validation du paiement.");
+                          } finally {
+                            setRegistering(false);
+                          }
+                        }}
+                        onError={(err) => {
+                          console.error("PayPal Error:", err);
+                          setRegistrationError("Échec du traitement par PayPal. Veuillez réessayer.");
+                        }}
+                      />
+                    </div>
                   )}
 
                   {!selectedTier.payment_link && !selectedTier.paypal_link && (
@@ -500,5 +548,6 @@ export default function EventDetailsPage({ params }: PageProps) {
         </div>
       )}
     </div>
+    </PayPalScriptProvider>
   );
 }
