@@ -864,7 +864,7 @@ export default function EditEventPage({ params }: PageProps) {
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
                         <span className="font-extrabold text-white">{tier.label}</span>
-                        <span className="font-bold text-emerald-400">{tier.price} €</span>
+                        <span className="font-bold text-emerald-400">{tier.price.toFixed(2)} €</span>
                       </div>
                       {/* Payment tags removed since PayPal is integrated globally */}
                       {tier.description && (
@@ -957,7 +957,7 @@ export default function EditEventPage({ params }: PageProps) {
                             <option value="" className="bg-zinc-950 text-white">—</option>
                             {ticketTiers.map(tier => (
                               <option key={tier.id} value={tier.label} className="bg-zinc-950 text-white">
-                                {tier.label} ({tier.price} €)
+                                {tier.label} ({tier.price.toFixed(2)} €)
                               </option>
                             ))}
                           </select>

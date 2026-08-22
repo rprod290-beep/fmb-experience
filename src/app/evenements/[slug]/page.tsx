@@ -353,7 +353,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                           {tier.label}
                         </span>
                         <span className="font-black text-base text-emerald-400">
-                          {tier.price} €
+                          {tier.price.toFixed(2)} €
                         </span>
                       </div>
                       {tier.description && (
@@ -400,7 +400,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                   Qui réserve ce billet ?
                 </h3>
                 <p className="text-xs text-white/40 mt-1">
-                  Vous avez choisi le tarif <b>{selectedTier.label}</b> ({selectedTier.price} €).
+                  Vous avez choisi le tarif <b>{selectedTier.label}</b> ({selectedTier.price.toFixed(2)} €).
                 </p>
               </div>
 
@@ -443,7 +443,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                 <div className="flex justify-between items-center py-3 px-4 bg-white/5 rounded-xl border border-white/5">
                   <span className="text-xs text-white/50">Total à payer :</span>
                   <span className="text-sm font-extrabold text-white">
-                    {ticketCount * selectedTier.price} € <span className="text-[10px] text-white/40 font-normal">({ticketCount} x {selectedTier.price} €)</span>
+                    {(ticketCount * selectedTier.price).toFixed(2)} € <span className="text-[10px] text-white/40 font-normal">({ticketCount} x {selectedTier.price.toFixed(2)} €)</span>
                   </span>
                 </div>
 
