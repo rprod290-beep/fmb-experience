@@ -326,6 +326,44 @@ function ScanResultContent() {
             </div>
           ) : null}
 
+          {/* Manual Input Form - always visible except when loading */}
+          {!loading && (
+            <div className="pt-4 border-t border-zinc-900/60">
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const target = e.currentTarget.elements.namedItem('manualCode') as HTMLInputElement;
+                  const val = target.value;
+                  if (val.trim()) {
+                    router.push(`/admin/scan?code=${val.trim().toUpperCase()}`);
+                    target.value = '';
+                  }
+                }}
+                className="space-y-2.5 text-left"
+              >
+                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                  Valider un code manuellement
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    name="manualCode"
+                    type="text"
+                    required
+                    maxLength={8}
+                    placeholder="CODE UNIQUE (EX: AB12CD34)"
+                    className="flex-grow bg-zinc-900/60 border border-zinc-800 focus:border-pink-500/50 rounded-xl px-4 py-3 text-xs focus:outline-none text-white font-mono tracking-widest uppercase text-center"
+                  />
+                  <button
+                    type="submit"
+                    className="px-4 py-3 bg-zinc-850 hover:bg-zinc-800 border border-zinc-800 hover:border-pink-500/20 text-white font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all active:scale-95"
+                  >
+                    Rechercher
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
           {/* BACK TO ADMIN BUTTON */}
           <div className="pt-4 border-t border-zinc-900">
             <Link 
