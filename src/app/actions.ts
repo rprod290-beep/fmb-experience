@@ -89,7 +89,7 @@ export async function registerBuyer(
     if (initialStatus === 'verified' && email) {
       try {
         const { data: eventData } = await supabaseServer
-          .from('events')
+          .from('public_events')
           .select('title, event_date, slug')
           .eq('id', eventId)
           .single();
