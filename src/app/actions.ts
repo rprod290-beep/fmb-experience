@@ -103,8 +103,8 @@ export async function registerBuyer(
             hour: '2-digit',
             minute: '2-digit'
           });
-          // On lance l'envoi en arrière-plan sans bloquer
-          sendTicketEmail(
+          // On attend l'envoi pour s'assurer que Vercel ne tue pas la fonction avant la fin
+          await sendTicketEmail(
             email.trim(),
             nameOrPseudo.trim(),
             eventData.title,
