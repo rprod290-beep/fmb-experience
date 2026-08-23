@@ -3,6 +3,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { sendTicketEmail } from '@/lib/mail';
 
+// Force a Vercel rebuild to load the new RESEND_API_KEY env variable
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
