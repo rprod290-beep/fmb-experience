@@ -42,7 +42,6 @@ export default function EventDetailsPage({ params }: PageProps) {
   // Modal State
   const [selectedTier, setSelectedTier] = useState<TicketTier | null>(null);
   const [buyerName, setBuyerName] = useState('');
-  const [buyerEmail, setBuyerEmail] = useState('');
   const [ticketCount, setTicketCount] = useState(1);
   const [registering, setRegistering] = useState(false);
   const [registrationError, setRegistrationError] = useState('');
@@ -132,22 +131,17 @@ export default function EventDetailsPage({ params }: PageProps) {
       setRegistrationError("Veuillez saisir votre nom.");
       return;
     }
-    if (!buyerEmail.trim() || !buyerEmail.includes('@')) {
-      setRegistrationError("Veuillez saisir une adresse e-mail valide.");
-      return;
-    }
 
     setRegistering(true);
     setRegistrationError('');
 
     try {
-      const result = await registerBuyer(event.id, buyerName.trim(), selectedTier.label, ticketCount, 'verified', buyerEmail.trim());
+      const result = await registerBuyer(event.id, buyerName.trim(), selectedTier.label, ticketCount, 'verified');
 
       if (result.success && result.confirmationCode) {
         // Reset state
         setSelectedTier(null);
         setBuyerName('');
-        setBuyerEmail('');
         setTicketCount(1);
         // Redirect to success page
         router.push(`/evenements/${event.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(selectedTier.label)}&quantity=${ticketCount}`);
@@ -452,7 +446,6 @@ export default function EventDetailsPage({ params }: PageProps) {
               onClick={() => {
                 setSelectedTier(null);
                 setBuyerName('');
-                setBuyerEmail('');
                 setTicketCount(1);
                 setRegistrationError('');
               }}
@@ -490,24 +483,6 @@ export default function EventDetailsPage({ params }: PageProps) {
                   <p className="text-[9px] text-white/30 mt-1.5 flex items-start gap-1">
                     <Info className="w-3.5 h-3.5 flex-shrink-0" />
                     Ce nom permettra aux organisateurs d'associer votre paiement à votre billet.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-white/60 uppercase tracking-widest mb-2">
-                    Adresse E-mail
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="Ex: david@gmail.com"
-                    value={buyerEmail}
-                    onChange={(e) => setBuyerEmail(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-base sm:text-sm focus:outline-none focus:border-purple-500 transition-colors text-white"
-                  />
-                  <p className="text-[9px] text-white/30 mt-1.5 flex items-start gap-1">
-                    <Info className="w-3.5 h-3.5 flex-shrink-0" />
-                    Votre billet et QR Code de réservation y seront envoyés directement.
                   </p>
                 </div>
 
@@ -563,10 +538,6 @@ export default function EventDetailsPage({ params }: PageProps) {
                             setRegistrationError("Veuillez saisir votre nom complet avant de procéder au paiement.");
                             return actions.reject();
                           }
-                          if (!buyerEmail.trim() || !buyerEmail.includes('@')) {
-                            setRegistrationError("Veuillez saisir une adresse e-mail valide.");
-                            return actions.reject();
-                          }
                           setRegistrationError('');
                           return actions.resolve();
                         }}
@@ -577,12 +548,11 @@ export default function EventDetailsPage({ params }: PageProps) {
                             const details = await actions.order.capture();
                             // Payment is captured successfully!
                             // Register the buyer with 'verified' (paid) status directly
-                            const result = await registerBuyer(event!.id, buyerName.trim(), selectedTier.label, ticketCount, 'verified', buyerEmail.trim());
+                            const result = await registerBuyer(event!.id, buyerName.trim(), selectedTier.label, ticketCount, 'verified');
                             if (result.success && result.confirmationCode) {
                               // Reset state
                               setSelectedTier(null);
                               setBuyerName('');
-                              setBuyerEmail('');
                               setTicketCount(1);
                               // Redirect to success page
                               router.push(`/evenements/${event!.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(selectedTier.label)}&quantity=${ticketCount}`);

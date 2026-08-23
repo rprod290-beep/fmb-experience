@@ -55,8 +55,7 @@ export async function registerBuyer(
   nameOrPseudo: string,
   ticketTierLabel: string,
   ticketCount: number = 1,
-  initialStatus: 'pending' | 'verified' = 'pending',
-  email: string | null = null
+  initialStatus: 'pending' | 'verified' = 'pending'
 ): Promise<{ success: boolean; confirmationCode?: string; error?: string }> {
   try {
     if (!eventId || !nameOrPseudo || !ticketTierLabel) {
@@ -74,7 +73,6 @@ export async function registerBuyer(
           ticket_tier_label: ticketTierLabel,
           status: initialStatus,
           ticket_count: ticketCount,
-          email: email ? email.trim() : null,
         },
       ])
       .select('confirmation_code')
@@ -83,43 +81,6 @@ export async function registerBuyer(
     if (error) {
       console.error('Erreur insertion buyer:', error);
       return { success: false, error: 'Impossible de valider votre réservation.' };
-    }
-
-    // Si le statut initial est directement vérifié (ex: gratuit ou paiement PayPal capturé), on envoie l'e-mail
-    if (initialStatus === 'verified' && email) {
-      try {
-        const { data: eventData } = await supabaseServer
-          .from('public_events')
-          .select('title, event_date, slug')
-          .eq('id', eventId)
-          .single();
-
-        if (eventData) {
-          const dateStr = new Date(eventData.event_date).toLocaleDateString('fr-FR', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          });
-          // On attend l'envoi pour s'assurer que Vercel ne tue pas la fonction avant la fin
-          await sendTicketEmail(
-            email.trim(),
-            nameOrPseudo.trim(),
-            eventData.title,
-            ticketTierLabel,
-            ticketCount,
-            data.confirmation_code,
-            dateStr,
-            eventData.slug
-          ).catch(mailErr => {
-            console.error("Échec d'envoi d'e-mail:", mailErr);
-          });
-        }
-      } catch (eventErr) {
-        console.error("Erreur récupération événement pour e-mail:", eventErr);
-      }
     }
 
     return { success: true, confirmationCode: data.confirmation_code };
