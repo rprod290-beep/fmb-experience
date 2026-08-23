@@ -486,6 +486,49 @@ export default function AdminDashboardPage() {
                   <p>3. Les détails du billet se chargeront immédiatement à l'écran.</p>
                   <p>4. Appuyez sur le bouton vert/rouge pour valider l'entrée et passer au scanneur suivant.</p>
                 </div>
+
+                <div className="p-4 bg-zinc-950/40 border border-zinc-850 rounded-2xl space-y-3">
+                  <h4 className="font-bold text-white uppercase text-[10px] tracking-wider">⌨️ Saisie Manuelle</h4>
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const target = e.currentTarget.elements.namedItem('manualCode') as HTMLInputElement;
+                      const val = target.value.trim().toUpperCase();
+                      if (val) {
+                        if (scannerRef.current) {
+                          try {
+                            await scannerRef.current.pause(true);
+                          } catch (err) {
+                            console.log("Scanner pause error:", err);
+                          }
+                        }
+                        verifyGuestInline(val);
+                        target.value = '';
+                      }
+                    }}
+                    className="space-y-2.5 text-left"
+                  >
+                    <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                      Valider un code de billet
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        name="manualCode"
+                        type="text"
+                        required
+                        maxLength={8}
+                        placeholder="EX: AB12CD34"
+                        className="flex-grow bg-zinc-900/60 border border-zinc-800 focus:border-purple-500/50 rounded-xl px-4 py-3 text-xs focus:outline-none text-white font-mono tracking-widest uppercase text-center"
+                      />
+                      <button
+                        type="submit"
+                        className="px-4 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold text-[10px] uppercase tracking-wider rounded-xl transition-all active:scale-95"
+                      >
+                        Valider
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
             </div>
           </div>
