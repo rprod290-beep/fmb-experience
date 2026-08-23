@@ -25,6 +25,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
+import { AudioProvider } from "@/components/AudioProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -38,7 +40,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <AudioProvider>
+          {children}
+        </AudioProvider>
       </body>
     </html>
   );

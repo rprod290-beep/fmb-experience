@@ -49,6 +49,7 @@ export interface Buyer {
   ticket_count: number;
   checked_in_count: number;
   checked_in_at: string | null;
+  email: string | null;
   created_at: string;
 }
 
