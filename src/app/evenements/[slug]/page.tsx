@@ -422,9 +422,24 @@ export default function EventDetailsPage({ params }: PageProps) {
 
           <div className="glass p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/5 space-y-4">
             <div className="flex justify-between items-center border-b border-white/5 pb-3">
-              <h3 className="text-lg font-black uppercase tracking-wider text-white">
-                🎟️ Tickets
+              <h3 className="text-lg font-black uppercase tracking-wider text-white flex items-center gap-1.5">
+                {event.slug.includes('center-parcs') ? (
+                  <>
+                    <span className="text-emerald-400">🏠</span> Hébergements
+                  </>
+                ) : event.category === 'trip' ? (
+                  <>
+                    <span className="text-emerald-400">✈️</span> Formules
+                  </>
+                ) : (
+                  <>
+                    <span className="text-pink-500">🎟️</span> Tickets
+                  </>
+                )}
               </h3>
+              <span className="px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[10px] uppercase font-bold tracking-widest animate-pulse">
+                {event.slug.includes('center-parcs') ? 'Cottages limités' : 'Places limitées'}
+              </span>
             </div>
 
             {ticketTiers.length === 0 ? (
