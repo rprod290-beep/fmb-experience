@@ -649,18 +649,20 @@ export default function EditEventPage({ params }: PageProps) {
                 </select>
               </div>
 
-              <div>
-                <label className="block font-semibold mb-1.5 text-zinc-300">Adresse secrète / Lieu (dévoilé après validation)</label>
-                <input
-                  type="text"
-                  placeholder="Ex: 45 Rue Pierre Charron, Paris ou Center Parcs"
-                  value={event.secret_address || ''}
-                  onChange={(e) => setEvent({ ...event, secret_address: e.target.value })}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-purple-500"
-                />
-              </div>
+              {event.category !== 'trip' && (
+                <div>
+                  <label className="block font-semibold mb-1.5 text-zinc-300">Adresse secrète / Lieu (dévoilé après validation)</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: 45 Rue Pierre Charron, Paris ou Center Parcs"
+                    value={event.secret_address || ''}
+                    onChange={(e) => setEvent({ ...event, secret_address: e.target.value })}
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+              )}
 
-              <div>
+              <div className={event.category === 'trip' ? 'md:col-span-2' : ''}>
                 <label className="block font-semibold mb-1.5 text-zinc-300">Image de couverture (Flyer)</label>
                 <div className="flex gap-2">
                   <input
