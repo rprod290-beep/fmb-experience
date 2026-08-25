@@ -425,7 +425,7 @@ export default function EventDetailsPage({ params }: PageProps) {
           )}
 
           <div className="glass p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/5 space-y-4">
-            <div className="flex justify-between items-center border-b border-white/5 pb-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-3">
               <h3 className="text-lg font-black uppercase tracking-wider text-white flex items-center gap-1.5">
                 {event.slug.includes('center-parcs') ? (
                   <>
@@ -473,9 +473,12 @@ export default function EventDetailsPage({ params }: PageProps) {
                             <span className="font-extrabold text-white text-sm uppercase tracking-wide group-hover:text-emerald-400 transition-colors block">
                               {tier.label}
                             </span>
-                            <span className="text-[10px] text-zinc-400 font-semibold">
+                            <span className="text-[10px] text-zinc-400 font-semibold block">
                               Cottage tout équipé • {tier.capacity || 4} personnes
                             </span>
+                            {tier.description && (
+                              <p className="text-[11px] text-white/50 mt-1.5 leading-relaxed font-medium">{tier.description}</p>
+                            )}
                           </div>
                         </div>
                         <div className="text-right">
@@ -607,6 +610,11 @@ export default function EventDetailsPage({ params }: PageProps) {
                     ? `Saisissez les prénoms des occupants pour votre cottage : ${selectedTier.label}` 
                     : `Vous avez choisi le tarif ${selectedTier.label} (${selectedTier.price.toFixed(2)} €).`}
                 </p>
+                {selectedTier.description && (
+                  <p className="text-[11px] text-white/60 mt-3 bg-white/[0.03] p-3 rounded-xl border border-white/5 leading-relaxed font-medium">
+                    {selectedTier.description}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-4">
