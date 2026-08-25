@@ -43,8 +43,17 @@ export default function EventDetailsPage({ params }: PageProps) {
   const [selectedTier, setSelectedTier] = useState<TicketTier | null>(null);
   const [buyerName, setBuyerName] = useState('');
   const [ticketCount, setTicketCount] = useState(1);
+  const [participants, setParticipants] = useState<string[]>([]);
   const [registering, setRegistering] = useState(false);
   const [registrationError, setRegistrationError] = useState('');
+
+  useEffect(() => {
+    if (selectedTier && selectedTier.capacity && selectedTier.capacity > 1) {
+      setParticipants(Array(selectedTier.capacity - 1).fill(''));
+    } else {
+      setParticipants([]);
+    }
+  }, [selectedTier]);
 
   useEffect(() => {
     async function fetchEventData() {
@@ -93,7 +102,7 @@ export default function EventDetailsPage({ params }: PageProps) {
         // 4. Récupérer les acheteurs pour calculer les places vendues
         const { data: buyersData, error: buyersError } = await supabase
           .from('buyers')
-          .select('ticket_tier_label, ticket_count')
+          .select('ticket_tier_label, ticket_count, ticket_tier_id, status')
           .eq('event_id', eventData.id);
 
         if (buyersError) {
@@ -113,16 +122,19 @@ export default function EventDetailsPage({ params }: PageProps) {
     }
   }, [slug]);
 
-  // Calcule le nombre de places vendues pour chaque catégorie
-  const getSoldTicketsForTier = (tierLabel: string) => {
+  // Calcule le nombre d'unités vendues pour chaque catégorie
+  const getSoldUnitsForTier = (tierId: string, tierLabel: string) => {
     return buyers
-      .filter(b => b.ticket_tier_label === tierLabel)
+      .filter(b => (b.ticket_tier_id === tierId || (!b.ticket_tier_id && b.ticket_tier_label === tierLabel)) && b.status === 'verified')
       .reduce((sum, b) => sum + (b.ticket_count || 1), 0);
   };
 
   const getRemainingTicketsForTier = (tier: TicketTier) => {
+    const sold = getSoldUnitsForTier(tier.id, tier.label);
+    if (tier.stock_quantity !== null && tier.stock_quantity !== undefined) {
+      return Math.max(0, tier.stock_quantity - sold);
+    }
     const capacity = tier.max_capacity ?? 100;
-    const sold = getSoldTicketsForTier(tier.label);
     return Math.max(0, capacity - sold);
   };
 
@@ -132,19 +144,40 @@ export default function EventDetailsPage({ params }: PageProps) {
       return;
     }
 
+    if (event.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1) {
+      if (participants.some(p => !p.trim())) {
+        setRegistrationError("Veuillez saisir le nom de tous les participants.");
+        return;
+      }
+    }
+
     setRegistering(true);
     setRegistrationError('');
 
     try {
-      const result = await registerBuyer(event.id, buyerName.trim(), selectedTier.label, ticketCount, 'verified');
+      const partsToSend = event.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1
+        ? participants.map(p => p.trim())
+        : null;
+
+      const result = await registerBuyer(
+        event.id, 
+        buyerName.trim(), 
+        selectedTier.label, 
+        ticketCount, 
+        'verified',
+        selectedTier.id,
+        partsToSend
+      );
 
       if (result.success && result.confirmationCode) {
+        const savedLabel = selectedTier.label;
         // Reset state
         setSelectedTier(null);
         setBuyerName('');
         setTicketCount(1);
+        setParticipants([]);
         // Redirect to success page
-        router.push(`/evenements/${event.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(selectedTier.label)}&quantity=${ticketCount}`);
+        router.push(`/evenements/${event.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(savedLabel)}&quantity=${ticketCount}`);
       } else {
         setRegistrationError(result.error || "Une erreur s'est produite lors de l'enregistrement.");
       }
@@ -421,18 +454,23 @@ export default function EventDetailsPage({ params }: PageProps) {
                         </div>
 
                         {/* Remaining capacity badge */}
-                        <div className="mt-1.5 flex items-center gap-1 text-[9px] font-black uppercase tracking-widest">
+                        <div className="mt-1.5 flex items-center flex-wrap gap-2 text-[9px] font-black uppercase tracking-widest">
                           {isSoldOut ? (
                             <span className="text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
-                              🔴 Épuisé
+                              🔴 Complet
                             </span>
-                          ) : remaining <= 10 ? (
+                          ) : remaining <= 5 ? (
                             <span className="text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 animate-pulse">
-                              ⚠️ Plus que {remaining} places !
+                              ⚠️ Plus que {remaining} {event.category === 'trip' && tier.stock_quantity !== null ? 'disponibles' : 'places'} !
                             </span>
                           ) : (
                             <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                              🟢 {remaining} places restantes
+                              🟢 {remaining} {event.category === 'trip' && tier.stock_quantity !== null ? 'disponibles' : 'places restantes'}
+                            </span>
+                          )}
+                          {event.category === 'trip' && tier.capacity && (
+                            <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                              👥 Groupe de {tier.capacity} pers.
                             </span>
                           )}
                         </div>
@@ -499,7 +537,7 @@ export default function EventDetailsPage({ params }: PageProps) {
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-white/60 uppercase tracking-widest mb-2">
-                    Nom Complet ou Pseudo
+                    {event?.category === 'trip' ? 'Responsable de la réservation' : 'Nom Complet ou Pseudo'}
                   </label>
                   <input
                     type="text"
@@ -514,6 +552,33 @@ export default function EventDetailsPage({ params }: PageProps) {
                     Ce nom permettra aux organisateurs d'associer votre paiement à votre billet.
                   </p>
                 </div>
+
+                {event?.category === 'trip' && selectedTier && selectedTier.capacity && selectedTier.capacity > 1 && (
+                  <div className="space-y-4 pt-4 border-t border-white/5 mt-4">
+                    <span className="block text-xs font-bold text-emerald-400 uppercase tracking-widest">
+                      Accompagnants du groupe ({selectedTier.capacity - 1} personnes)
+                    </span>
+                    {participants.map((p, idx) => (
+                      <div key={idx} className="space-y-1">
+                        <label className="block text-[10px] font-bold text-white/50 uppercase tracking-wider">
+                          Participant {idx + 2}
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder={`Nom complet du participant ${idx + 2}`}
+                          value={p}
+                          onChange={(e) => {
+                            const newParts = [...participants];
+                            newParts[idx] = e.target.value;
+                            setParticipants(newParts);
+                          }}
+                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:border-emerald-500 transition-colors text-white"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-bold text-white/60 uppercase tracking-widest mb-2">
@@ -567,6 +632,12 @@ export default function EventDetailsPage({ params }: PageProps) {
                             setRegistrationError("Veuillez saisir votre nom complet avant de procéder au paiement.");
                             return actions.reject();
                           }
+                          if (event?.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1) {
+                            if (participants.some(p => !p.trim())) {
+                              setRegistrationError("Veuillez renseigner le nom de tous les participants.");
+                              return actions.reject();
+                            }
+                          }
                           setRegistrationError('');
                           return actions.resolve();
                         }}
@@ -577,14 +648,28 @@ export default function EventDetailsPage({ params }: PageProps) {
                             const details = await actions.order.capture();
                             // Payment is captured successfully!
                             // Register the buyer with 'verified' (paid) status directly
-                            const result = await registerBuyer(event!.id, buyerName.trim(), selectedTier.label, ticketCount, 'verified');
+                            const partsToSend = event!.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1 
+                              ? participants.map(p => p.trim()) 
+                              : null;
+
+                            const result = await registerBuyer(
+                              event!.id, 
+                              buyerName.trim(), 
+                              selectedTier.label, 
+                              ticketCount, 
+                              'verified',
+                              selectedTier.id,
+                              partsToSend
+                            );
                             if (result.success && result.confirmationCode) {
+                              const savedLabel = selectedTier.label;
                               // Reset state
                               setSelectedTier(null);
                               setBuyerName('');
                               setTicketCount(1);
+                              setParticipants([]);
                               // Redirect to success page
-                              router.push(`/evenements/${event!.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(selectedTier.label)}&quantity=${ticketCount}`);
+                              router.push(`/evenements/${event!.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(savedLabel)}&quantity=${ticketCount}`);
                             } else {
                               setRegistrationError(result.error || "Paiement réussi mais échec de l'enregistrement. Contactez le support.");
                             }

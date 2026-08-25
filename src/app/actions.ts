@@ -55,7 +55,9 @@ export async function registerBuyer(
   nameOrPseudo: string,
   ticketTierLabel: string,
   ticketCount: number = 1,
-  initialStatus: 'pending' | 'verified' = 'pending'
+  initialStatus: 'pending' | 'verified' = 'pending',
+  ticketTierId?: string | null,
+  additionalParticipants?: string[] | null
 ): Promise<{ success: boolean; confirmationCode?: string; error?: string }> {
   try {
     if (!eventId || !nameOrPseudo || !ticketTierLabel) {
@@ -64,17 +66,24 @@ export async function registerBuyer(
 
     // Insère le buyer dans Supabase
     // Le code de confirmation sera généré automatiquement par la base de données (valeur par défaut)
+    const insertData: any = {
+      event_id: eventId,
+      name_or_pseudo: nameOrPseudo.trim(),
+      ticket_tier_label: ticketTierLabel,
+      status: initialStatus,
+      ticket_count: ticketCount,
+    };
+
+    if (ticketTierId) {
+      insertData.ticket_tier_id = ticketTierId;
+    }
+    if (additionalParticipants) {
+      insertData.additional_participants = additionalParticipants;
+    }
+
     const { data, error } = await supabaseServer
       .from('buyers')
-      .insert([
-        {
-          event_id: eventId,
-          name_or_pseudo: nameOrPseudo.trim(),
-          ticket_tier_label: ticketTierLabel,
-          status: initialStatus,
-          ticket_count: ticketCount,
-        },
-      ])
+      .insert([insertData])
       .select('confirmation_code')
       .single();
 
@@ -83,9 +92,56 @@ export async function registerBuyer(
       return { success: false, error: 'Impossible de valider votre réservation.' };
     }
 
+    // Si le statut est directement validé, vérifier et potentiellement désactiver le tarif si hors stock
+    if (initialStatus === 'verified' && ticketTierId) {
+      await checkAndDisableTierIfOutOfStock(ticketTierId);
+    }
+
     return { success: true, confirmationCode: data.confirmation_code };
   } catch (err) {
     console.error('Erreur catch-all registerBuyer:', err);
     return { success: false, error: 'Une erreur serveur est survenue.' };
+  }
+}
+
+/**
+ * Vérifie si le stock d'un tarif est épuisé et désactive automatiquement le tarif si c'est le cas.
+ */
+export async function checkAndDisableTierIfOutOfStock(ticketTierId: string): Promise<void> {
+  try {
+    // 1. Récupérer le tarif pour voir sa stock_quantity
+    const { data: tier, error: tierError } = await supabaseServer
+      .from('ticket_tiers')
+      .select('stock_quantity, is_active')
+      .eq('id', ticketTierId)
+      .single();
+
+    if (tierError || !tier || tier.stock_quantity === null || !tier.is_active) {
+      return;
+    }
+
+    // 2. Compter le nombre de places vendues (buyers avec ce ticket_tier_id et status = 'verified')
+    const { data: buyers, error: buyersError } = await supabaseServer
+      .from('buyers')
+      .select('ticket_count')
+      .eq('ticket_tier_id', ticketTierId)
+      .eq('status', 'verified');
+
+    if (buyersError || !buyers) {
+      return;
+    }
+
+    const soldCount = buyers.reduce((sum, b) => sum + (b.ticket_count || 1), 0);
+
+    // 3. Si le stock est atteint ou dépassé, désactiver le tarif
+    if (soldCount >= tier.stock_quantity) {
+      await supabaseServer
+        .from('ticket_tiers')
+        .update({ is_active: false })
+        .eq('id', ticketTierId);
+      console.log(`[STOCK] Le tarif ${ticketTierId} est complet (${soldCount}/${tier.stock_quantity}). Désactivé automatiquement.`);
+    }
+  } catch (err) {
+    console.error('Erreur lors de la vérification de stock:', err);
   }
 }

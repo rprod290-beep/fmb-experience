@@ -4,6 +4,7 @@ import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase, Event, DJ, TicketTier, Buyer } from '@/lib/supabase';
+import { checkAndDisableTierIfOutOfStock } from '@/app/actions';
 import { 
   ArrowLeft, 
   Save, 
@@ -54,7 +55,9 @@ export default function EditEventPage({ params }: PageProps) {
     payment_link: '', 
     paypal_link: '',
     display_order: '0', 
-    is_active: true 
+    is_active: true,
+    capacity: '',
+    stock_quantity: ''
   });
   const [editingTierId, setEditingTierId] = useState<string | null>(null);
 
@@ -299,6 +302,12 @@ export default function EditEventPage({ params }: PageProps) {
   // =========================================================================
   // TICKET TIERS (VAGUES)
   // =========================================================================
+  const getReservedCountForTier = (tierId: string, tierLabel: string) => {
+    return buyers
+      .filter(b => (b.ticket_tier_id === tierId || (!b.ticket_tier_id && b.ticket_tier_label === tierLabel)) && b.status === 'verified')
+      .reduce((sum, b) => sum + (b.ticket_count || 1), 0);
+  };
+
   const handleEditTierClick = (tier: any) => {
     setEditingTierId(tier.id);
     setTierForm({
@@ -309,18 +318,23 @@ export default function EditEventPage({ params }: PageProps) {
       paypal_link: tier.paypal_link || '',
       display_order: tier.display_order.toString(),
       max_capacity: (tier.max_capacity ?? 100).toString(),
-      is_active: tier.is_active
+      is_active: tier.is_active,
+      capacity: tier.capacity !== undefined && tier.capacity !== null ? tier.capacity.toString() : '',
+      stock_quantity: tier.stock_quantity !== undefined && tier.stock_quantity !== null ? tier.stock_quantity.toString() : ''
     });
   };
 
   const handleCancelEditTier = () => {
     setEditingTierId(null);
-    setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', max_capacity: '100', is_active: true });
+    setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', max_capacity: '100', is_active: true, capacity: '', stock_quantity: '' });
   };
 
   const handleAddTier = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tierForm.label || !tierForm.price) return;
+
+    const capacityValue = event.category === 'trip' && tierForm.capacity ? parseInt(tierForm.capacity) : null;
+    const stockQuantityValue = event.category === 'trip' && tierForm.stock_quantity ? parseInt(tierForm.stock_quantity) : null;
 
     if (editingTierId) {
       // Mode modification
@@ -332,7 +346,9 @@ export default function EditEventPage({ params }: PageProps) {
           price: parseFloat(tierForm.price),
           display_order: parseInt(tierForm.display_order) || 0,
           max_capacity: parseInt(tierForm.max_capacity) || 100,
-          is_active: tierForm.is_active
+          is_active: tierForm.is_active,
+          capacity: capacityValue,
+          stock_quantity: stockQuantityValue
         })
         .eq('id', editingTierId)
         .select()
@@ -343,7 +359,7 @@ export default function EditEventPage({ params }: PageProps) {
       } else if (data) {
         setTicketTiers(prev => prev.map(t => t.id === editingTierId ? data : t).sort((a, b) => a.display_order - b.display_order));
         setEditingTierId(null);
-        setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', max_capacity: '100', is_active: true });
+        setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', max_capacity: '100', is_active: true, capacity: '', stock_quantity: '' });
       }
     } else {
       // Mode création
@@ -358,7 +374,9 @@ export default function EditEventPage({ params }: PageProps) {
           paypal_link: tierForm.paypal_link.trim() || 'https://paypal.com',
           display_order: parseInt(tierForm.display_order) || 0,
           max_capacity: parseInt(tierForm.max_capacity) || 100,
-          is_active: tierForm.is_active
+          is_active: tierForm.is_active,
+          capacity: capacityValue,
+          stock_quantity: stockQuantityValue
         }])
         .select()
         .single();
@@ -367,7 +385,7 @@ export default function EditEventPage({ params }: PageProps) {
         alert(error.message);
       } else if (data) {
         setTicketTiers(prev => [...prev, data].sort((a, b) => a.display_order - b.display_order));
-        setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', max_capacity: '100', is_active: true });
+        setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', max_capacity: '100', is_active: true, capacity: '', stock_quantity: '' });
       }
     }
   };
@@ -414,6 +432,19 @@ export default function EditEventPage({ params }: PageProps) {
       alert("Erreur: " + error.message);
     } else {
       setBuyers(prev => prev.map(b => b.id === buyerId ? { ...b, status: newStatus } : b));
+      if (newStatus === 'verified') {
+        const buyer = buyers.find(b => b.id === buyerId);
+        if (buyer && buyer.ticket_tier_id) {
+          await checkAndDisableTierIfOutOfStock(buyer.ticket_tier_id);
+          // Recharger les ticket tiers pour refléter le changement d'état d'activation
+          const { data: tiersData } = await supabase
+            .from('ticket_tiers')
+            .select('*')
+            .eq('event_id', id)
+            .order('display_order', { ascending: true });
+          if (tiersData) setTicketTiers(tiersData);
+        }
+      }
     }
   };
 
@@ -863,6 +894,33 @@ export default function EditEventPage({ params }: PageProps) {
                   className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
                 />
               </div>
+              {event.category === 'trip' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                  <div>
+                    <label className="block font-semibold mb-1 text-zinc-300">Capacité du tarif (nombre d'accompagnants)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Ex: 6 (pour un cottage de 6 personnes)"
+                      value={tierForm.capacity}
+                      onChange={(e) => setTierForm({ ...tierForm, capacity: e.target.value })}
+                      className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-zinc-300">Stock disponible (cottages/unités)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="Ex: 5"
+                      value={tierForm.stock_quantity}
+                      onChange={(e) => setTierForm({ ...tierForm, stock_quantity: e.target.value })}
+                      className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
+                    />
+                    <p className="text-[9px] text-zinc-500 mt-1">Laissez vide si vous n'avez pas encore de limite fixée.</p>
+                  </div>
+                </div>
+              )}
               {/* Note: SumUp and PayPal links are now automated via the global PayPal integration */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
@@ -937,6 +995,14 @@ export default function EditEventPage({ params }: PageProps) {
                       </div>
                       <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-semibold mt-1">
                         <span>Capacité : <b>{tier.max_capacity ?? 100}</b> places</span>
+                        {event.category === 'trip' && tier.capacity && (
+                          <span className="text-zinc-500">• Groupe : <b>{tier.capacity}</b> pers.</span>
+                        )}
+                        {event.category === 'trip' && tier.stock_quantity !== null && tier.stock_quantity !== undefined && (
+                          <span className={`${getReservedCountForTier(tier.id, tier.label) >= tier.stock_quantity ? 'text-red-400 font-extrabold animate-pulse' : 'text-purple-400'} ml-1`}>
+                            • Stock : <b>{getReservedCountForTier(tier.id, tier.label)} / {tier.stock_quantity}</b> {getReservedCountForTier(tier.id, tier.label) >= tier.stock_quantity ? 'COMPLET' : 'réservés'}
+                          </span>
+                        )}
                       </div>
                       {/* Payment tags removed since PayPal is integrated globally */}
                       {tier.description && (

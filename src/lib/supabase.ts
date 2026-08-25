@@ -38,6 +38,8 @@ export interface TicketTier {
   display_order: number;
   is_active: boolean;
   max_capacity: number;
+  capacity: number | null;
+  stock_quantity: number | null;
 }
 
 export interface Buyer {
@@ -46,6 +48,8 @@ export interface Buyer {
   confirmation_code: string;
   name_or_pseudo: string | null;
   ticket_tier_label: string | null;
+  ticket_tier_id: string | null;
+  additional_participants: string[] | null;
   status: 'pending' | 'verified' | 'added_close_friends';
   notes: string | null;
   ticket_count: number;
