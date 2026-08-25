@@ -476,9 +476,6 @@ export default function EventDetailsPage({ params }: PageProps) {
                             <span className="text-[10px] text-zinc-400 font-semibold block">
                               Cottage tout équipé • {tier.capacity || 4} personnes
                             </span>
-                            {tier.description && (
-                              <p className="text-[11px] text-white/50 mt-1.5 leading-relaxed font-medium">{tier.description}</p>
-                            )}
                           </div>
                         </div>
                         <div className="text-right">
