@@ -310,12 +310,14 @@ export default function EventDetailsPage({ params }: PageProps) {
               <Calendar className="w-4 h-4 text-purple-400" />
               <span className="capitalize">{formatDate(event.event_date, event.end_date)}</span>
             </div>
-            {event.category !== 'trip' && (
-              <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-pink-400" />
-                <span>Lieu Secret</span>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-pink-400" />
+              <span>
+                {event.category === 'trip' 
+                  ? (event.address || 'Adresse à venir') 
+                  : 'Lieu Secret'}
+              </span>
+            </div>
           </div>
         </div>
       </div>

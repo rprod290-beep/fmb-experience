@@ -11,6 +11,7 @@ export interface Event {
   category: 'party' | 'trip';
   description: string | null;
   secret_address: string | null; // Note: null pour les requêtes publiques via la vue
+  address: string | null; // Adresse publique pour les voyages
   cover_image_url: string | null;
   contact_email: string;
   instagram_url: string | null;
