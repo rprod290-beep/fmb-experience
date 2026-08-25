@@ -223,7 +223,7 @@ export default function EventDetailsPage({ params }: PageProps) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#050508] text-white">
         <div className="w-12 h-12 rounded-full border-2 border-pink-500/20 border-t-pink-500 animate-spin"></div>
-        <p className="text-white/40 text-xs">Chargement de la soirée...</p>
+        <p className="text-white/40 text-xs">Chargement...</p>
       </div>
     );
   }
@@ -389,12 +389,14 @@ export default function EventDetailsPage({ params }: PageProps) {
               📍 Infos Pratiques
             </h3>
             <div className="space-y-3 text-xs leading-relaxed text-white/70">
-              <div className="p-3.5 bg-purple-500/5 border border-purple-500/10 rounded-2xl flex items-start gap-3">
-                <Info className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
-                <p>
-                  <b>Adresse Communiquée Après Achat</b> : L'emplacement de la soirée est tenu secret. Une fois votre billet réservé et validé, vous obtiendrez l'accès immédiat à l'adresse exacte.
-                </p>
-              </div>
+              {event.category === 'party' && (
+                <div className="p-3.5 bg-purple-500/5 border border-purple-500/10 rounded-2xl flex items-start gap-3">
+                  <Info className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
+                  <p>
+                    <b>Adresse Communiquée Après Achat</b> : L'emplacement de la soirée est tenu secret. Une fois votre billet réservé et validé, vous obtiendrez l'accès immédiat à l'adresse exacte.
+                  </p>
+                </div>
+              )}
               <div className="p-3.5 bg-orange-500/5 border border-orange-500/10 rounded-2xl flex items-start gap-3">
                 <Users className="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5" />
                 <p>
@@ -412,7 +414,7 @@ export default function EventDetailsPage({ params }: PageProps) {
             <div className="glass rounded-3xl border border-white/5 overflow-hidden shadow-2xl">
               <img
                 src={event.cover_image_url}
-                alt="Flyer officiel de la soirée"
+                alt={event.category === 'trip' ? "Affiche officielle du voyage" : "Flyer officiel de la soirée"}
                 className="w-full h-auto object-contain hover:scale-[1.02] transition-transform duration-500"
               />
             </div>
