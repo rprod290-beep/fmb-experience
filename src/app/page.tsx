@@ -197,7 +197,11 @@ export default function Home() {
                   </div>
                   <div className="flex items-center gap-3 text-white/80 text-sm">
                     <MapPin className="w-5 h-5 text-pink-400 flex-shrink-0" />
-                    <span className="font-semibold">Lieu Secret (débloqué après achat)</span>
+                    <span className="font-semibold">
+                      {featuredEvent.category === 'trip' 
+                        ? (featuredEvent.address || 'Adresse à venir') 
+                        : 'Lieu Secret (débloqué après achat)'}
+                    </span>
                   </div>
                 </div>
 
@@ -223,7 +227,7 @@ export default function Home() {
                     Aussi à l'affiche
                   </h3>
                   <span className="text-xs text-white/40 uppercase tracking-widest font-semibold">
-                    {otherUpcomingEvents.length} soirée{otherUpcomingEvents.length > 1 ? 's' : ''}
+                    {otherUpcomingEvents.length} événement{otherUpcomingEvents.length > 1 ? 's' : ''}
                   </span>
                 </div>
 
