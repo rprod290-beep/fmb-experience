@@ -724,17 +724,27 @@ export default function EditEventPage({ params }: PageProps) {
           {/* DJs COLUMN */}
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-6">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-800 pb-3 flex items-center gap-2">
-              <Music className="w-4 h-4 text-pink-500" /> 2. Gestion de la Line-up DJs
+              {event.category === 'trip' ? (
+                <>
+                  <Sparkles className="w-4 h-4 text-emerald-400" /> 2. Activités & Prestations incluses
+                </>
+              ) : (
+                <>
+                  <Music className="w-4 h-4 text-pink-500" /> 2. Gestion de la Line-up DJs
+                </>
+              )}
             </h3>
 
             {/* Add DJ Form */}
             <form onSubmit={handleAddDj} className="p-4 bg-zinc-950 border border-zinc-800 rounded-2xl space-y-3 text-xs text-zinc-400">
               <div>
-                <label className="block font-semibold mb-1 text-zinc-300">Nom de scène du DJ</label>
+                <label className="block font-semibold mb-1 text-zinc-300">
+                  {event.category === 'trip' ? "Nom de la prestation ou de l'activité" : "Nom de scène du DJ"}
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="DJ Snake"
+                  placeholder={event.category === 'trip' ? "Ex: Cottage VIP Premium 4 pers." : "DJ Snake"}
                   value={djForm.name}
                   onChange={(e) => setDjForm({ ...djForm, name: e.target.value })}
                   className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
@@ -752,10 +762,12 @@ export default function EditEventPage({ params }: PageProps) {
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1 text-zinc-300">Lien Instagram (facultatif)</label>
+                  <label className="block font-semibold mb-1 text-zinc-300">
+                    {event.category === 'trip' ? "Lien d'information (facultatif)" : "Lien Instagram (facultatif)"}
+                  </label>
                   <input
                     type="url"
-                    placeholder="https://instagram.com/..."
+                    placeholder="https://..."
                     value={djForm.instagram_url}
                     onChange={(e) => setDjForm({ ...djForm, instagram_url: e.target.value })}
                     className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
@@ -766,14 +778,16 @@ export default function EditEventPage({ params }: PageProps) {
                 type="submit"
                 className="w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs"
               >
-                <Plus className="w-3.5 h-3.5" /> Ajouter à la Line-up
+                <Plus className="w-3.5 h-3.5" /> {event.category === 'trip' ? "Ajouter la prestation" : "Ajouter à la Line-up"}
               </button>
             </form>
 
             {/* DJs list */}
             <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
               {djs.length === 0 ? (
-                <p className="text-zinc-500 text-center py-6 text-xs font-medium">Aucun DJ configuré.</p>
+                <p className="text-zinc-500 text-center py-6 text-xs font-medium">
+                  {event.category === 'trip' ? "Aucune prestation configurée." : "Aucun DJ configuré."}
+                </p>
               ) : (
                 djs.map((dj) => (
                   <div key={dj.id} className="p-3 bg-zinc-950 border border-zinc-850 rounded-xl flex items-center justify-between text-xs">

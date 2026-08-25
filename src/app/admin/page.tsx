@@ -33,6 +33,7 @@ export default function AdminDashboardPage() {
   const [inlineUpdating, setInlineUpdating] = useState(false);
   const [scanError, setScanError] = useState<string>('');
   const scannerRef = useRef<any>(null);
+  const [activeTab, setActiveTab] = useState<'party' | 'trip'>('party');
 
   // Vérifier la session
   useEffect(() => {
@@ -72,22 +73,22 @@ export default function AdminDashboardPage() {
     router.replace('/');
   };
 
-  const handleCreateEvent = async () => {
+  const handleCreateEvent = async (category: 'party' | 'trip') => {
     try {
       setCreating(true);
       const timestamp = Date.now();
       const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
       const newEventPayload = {
-        title: 'Nouvel Événement (Brouillon)',
-        slug: `brouillon-${timestamp}`,
+        title: category === 'trip' ? 'Nouveau Voyage (Brouillon)' : 'Nouvelle Soirée (Brouillon)',
+        slug: `brouillon-${category}-${timestamp}`,
         event_date: nextWeek,
-        subtitle: 'L\'expérience exclusive',
-        description: 'Description de la soirée...',
+        subtitle: category === 'trip' ? 'L\'aventure exclusive' : 'L\'expérience exclusive',
+        description: category === 'trip' ? 'Description du voyage...' : 'Description de la soirée...',
         contact_email: 'contact@fmb-experience.com',
         whatsapp_number: '33', // code international standard de base
         status: 'draft',
-        category: 'party',
+        category: category,
       };
 
       const { data, error } = await supabase
@@ -280,6 +281,8 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const filteredEvents = events.filter(e => activeTab === 'trip' ? e.category === 'trip' : e.category !== 'trip');
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-zinc-950 text-white">
@@ -345,11 +348,19 @@ export default function AdminDashboardPage() {
             </button>
 
             <button
-              onClick={handleCreateEvent}
+              onClick={() => handleCreateEvent('party')}
               disabled={creating}
               className="flex items-center gap-2 px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs uppercase tracking-wider shadow-lg shadow-purple-600/15 transition-all active:scale-[0.98] disabled:opacity-50 flex-grow sm:flex-grow-0 justify-center"
             >
-              <Plus className="w-4 h-4" /> {creating ? 'Création...' : 'Créer un événement'}
+              <Plus className="w-4 h-4" /> {creating ? 'Création...' : 'Créer une Soirée'}
+            </button>
+
+            <button
+              onClick={() => handleCreateEvent('trip')}
+              disabled={creating}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs uppercase tracking-wider shadow-lg shadow-emerald-600/15 transition-all active:scale-[0.98] disabled:opacity-50 flex-grow sm:flex-grow-0 justify-center"
+            >
+              <Plus className="w-4 h-4" /> {creating ? 'Création...' : 'Créer un Voyage'}
             </button>
           </div>
         </div>
@@ -535,18 +546,42 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
+        {/* Navigation Tabs */}
+        <div className="flex border-b border-zinc-900 pb-px gap-6 mb-6">
+          <button
+            onClick={() => setActiveTab('party')}
+            className={`pb-4 text-xs sm:text-sm font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${
+              activeTab === 'party'
+                ? 'text-white border-purple-500'
+                : 'text-zinc-500 hover:text-zinc-300 border-transparent'
+            }`}
+          >
+            🎵 Mes Soirées ({events.filter(e => e.category !== 'trip').length})
+          </button>
+          <button
+            onClick={() => setActiveTab('trip')}
+            className={`pb-4 text-xs sm:text-sm font-black uppercase tracking-wider border-b-2 transition-all flex items-center gap-2 ${
+              activeTab === 'trip'
+                ? 'text-white border-emerald-500'
+                : 'text-zinc-500 hover:text-zinc-300 border-transparent'
+            }`}
+          >
+            ✈️ Mes Voyages ({events.filter(e => e.category === 'trip').length})
+          </button>
+        </div>
+
         {/* Events Grid */}
-        {events.length === 0 ? (
+        {filteredEvents.length === 0 ? (
           <div className="p-16 border border-dashed border-zinc-800 rounded-3xl text-center space-y-3">
             <Calendar className="w-12 h-12 text-zinc-600 mx-auto" />
             <h3 className="font-bold text-white text-sm">Aucun événement</h3>
             <p className="text-xs text-zinc-400 max-w-xs mx-auto">
-              Commencez par créer votre premier événement en cliquant sur le bouton ci-dessus.
+              Commencez par créer votre premier événement en cliquant sur les boutons ci-dessus.
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {events.map((event) => (
+            {filteredEvents.map((event) => (
               <div
                 key={event.id}
                 className="bg-zinc-900 border border-zinc-800 rounded-2xl flex flex-col justify-between overflow-hidden hover:border-zinc-700 transition-colors group"
