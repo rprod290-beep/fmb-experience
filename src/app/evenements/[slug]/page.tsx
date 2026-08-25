@@ -423,13 +423,75 @@ export default function EventDetailsPage({ params }: PageProps) {
               <h3 className="text-lg font-black uppercase tracking-wider text-white">
                 🎟️ Tickets
               </h3>
-              <span className="px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[10px] uppercase font-bold tracking-widest animate-pulse">
-                Places limitées
-              </span>
             </div>
 
             {ticketTiers.length === 0 ? (
               <p className="text-white/40 text-center py-6 text-xs">Aucun billet en vente pour le moment.</p>
+            ) : event.slug.includes('center-parcs') ? (
+              <div className="grid grid-cols-1 gap-4">
+                {ticketTiers.map((tier) => {
+                  const remaining = getRemainingTicketsForTier(tier);
+                  const isSoldOut = remaining <= 0;
+
+                  return (
+                    <div
+                      key={tier.id}
+                      onClick={() => !isSoldOut && setSelectedTier(tier)}
+                      className={`p-5 rounded-2xl border transition-all duration-300 flex flex-col justify-between gap-4 group cursor-pointer ${
+                        selectedTier?.id === tier.id 
+                          ? 'border-emerald-500 bg-emerald-500/5 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
+                          : 'border-white/5 bg-white/[0.01] hover:border-white/20'
+                      } ${isSoldOut ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-bold text-lg">
+                            🏠
+                          </div>
+                          <div className="text-left">
+                            <span className="font-extrabold text-white text-sm uppercase tracking-wide group-hover:text-emerald-400 transition-colors block">
+                              {tier.label}
+                            </span>
+                            <span className="text-[10px] text-zinc-400 font-semibold">
+                              Cottage tout équipé • {tier.capacity || 4} personnes
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-black text-base text-emerald-400 block">
+                            {tier.price.toFixed(2)} €
+                          </span>
+                          <span className="text-[9px] text-white/30 font-bold uppercase tracking-wider block">
+                            par hébergement
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center border-t border-white/5 pt-3">
+                        {isSoldOut ? (
+                          <span className="text-[10px] text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20 font-extrabold uppercase tracking-wider">
+                            🔴 Complet
+                          </span>
+                        ) : remaining <= 3 ? (
+                          <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider animate-pulse">
+                            ⚠️ Plus que {remaining} cottage{remaining > 1 ? 's' : ''} !
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">
+                            🟢 {remaining} cottage{remaining > 1 ? 's' : ''} disponible{remaining > 1 ? 's' : ''}
+                          </span>
+                        )}
+
+                        <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                          selectedTier?.id === tier.id ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-white'
+                        }`}>
+                          {selectedTier?.id === tier.id ? 'Sélectionné ✓' : 'Choisir ce cottage →'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             ) : (
               <div className="space-y-4">
                 {ticketTiers.map((tier) => {
@@ -453,7 +515,6 @@ export default function EventDetailsPage({ params }: PageProps) {
                           </span>
                         </div>
 
-                        {/* Remaining capacity badge */}
                         <div className="mt-1.5 flex items-center flex-wrap gap-2 text-[9px] font-black uppercase tracking-widest">
                           {isSoldOut ? (
                             <span className="text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
@@ -468,16 +529,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                               🟢 {remaining} {event.category === 'trip' && tier.stock_quantity !== null ? 'disponibles' : 'places restantes'}
                             </span>
                           )}
-                          {event.category === 'trip' && tier.capacity && (
-                            <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                              👥 Groupe de {tier.capacity} pers.
-                            </span>
-                          )}
                         </div>
-
-                        {tier.description && (
-                          <p className="text-[11px] text-white/50 mt-2 leading-relaxed">{tier.description}</p>
-                        )}
                       </div>
 
                       {isSoldOut ? (
@@ -493,7 +545,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                           onClick={() => setSelectedTier(tier)}
                           className="glow-btn-primary w-full py-2.5 text-xs flex items-center justify-center gap-1.5 uppercase font-bold tracking-wider"
                         >
-                          <Ticket className="w-3.5 h-3.5" /> Acheter
+                          <Ticket className="w-3.5 h-3.5" /> Réserver
                         </button>
                       )}
                     </div>
@@ -527,46 +579,52 @@ export default function EventDetailsPage({ params }: PageProps) {
                   Réservation
                 </span>
                 <h3 className="text-xl font-black text-white uppercase mt-2">
-                  Qui réserve ce billet ?
+                  {event?.slug.includes('center-parcs') ? "Réservation du cottage" : "Qui réserve ce billet ?"}
                 </h3>
                 <p className="text-xs text-white/40 mt-1">
-                  Vous avez choisi le tarif <b>{selectedTier.label}</b> ({selectedTier.price.toFixed(2)} €).
+                  {event?.slug.includes('center-parcs') 
+                    ? `Saisissez les prénoms des occupants pour votre cottage : ${selectedTier.label}` 
+                    : `Vous avez choisi le tarif ${selectedTier.label} (${selectedTier.price.toFixed(2)} €).`}
                 </p>
               </div>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-bold text-white/60 uppercase tracking-widest mb-2">
-                    {event?.category === 'trip' ? 'Responsable de la réservation' : 'Nom Complet ou Pseudo'}
+                    {event?.slug.includes('center-parcs') ? "Responsable de la réservation (Prénom)" : (event?.category === 'trip' ? 'Responsable de la réservation' : 'Nom Complet ou Pseudo')}
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="Ex: David Laroche"
+                    placeholder="Ex: David"
                     value={buyerName}
                     onChange={(e) => setBuyerName(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-base sm:text-sm focus:outline-none focus:border-purple-500 transition-colors text-white"
                   />
                   <p className="text-[9px] text-white/30 mt-1.5 flex items-start gap-1">
                     <Info className="w-3.5 h-3.5 flex-shrink-0" />
-                    Ce nom permettra aux organisateurs d'associer votre paiement à votre billet.
+                    {event?.slug.includes('center-parcs') 
+                      ? "Ce prénom sera utilisé pour l'enregistrement principal du cottage." 
+                      : "Ce nom permettra aux organisateurs d'associer votre paiement à votre billet."}
                   </p>
                 </div>
 
                 {event?.category === 'trip' && selectedTier && selectedTier.capacity && selectedTier.capacity > 1 && (
                   <div className="space-y-4 pt-4 border-t border-white/5 mt-4">
                     <span className="block text-xs font-bold text-emerald-400 uppercase tracking-widest">
-                      Accompagnants du groupe ({selectedTier.capacity - 1} personnes)
+                      {event?.slug.includes('center-parcs')
+                        ? `Prénoms des autres personnes occupant le cottage (${selectedTier.capacity - 1} pers.)`
+                        : `Prénoms des autres participants (${selectedTier.capacity - 1} pers.)`}
                     </span>
                     {participants.map((p, idx) => (
                       <div key={idx} className="space-y-1">
                         <label className="block text-[10px] font-bold text-white/50 uppercase tracking-wider">
-                          Participant {idx + 2}
+                          Occupant {idx + 2}
                         </label>
                         <input
                           type="text"
                           required
-                          placeholder={`Nom complet du participant ${idx + 2}`}
+                          placeholder={`Prénom complet de l'occupant ${idx + 2}`}
                           value={p}
                           onChange={(e) => {
                             const newParts = [...participants];
@@ -580,25 +638,27 @@ export default function EventDetailsPage({ params }: PageProps) {
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-xs font-bold text-white/60 uppercase tracking-widest mb-2">
-                    Nombre de Places
-                  </label>
-                  <select
-                    value={ticketCount}
-                    onChange={(e) => setTicketCount(Number(e.target.value))}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-base sm:text-sm focus:outline-none focus:border-purple-500 transition-colors text-white cursor-pointer"
-                  >
-                    {Array.from(
-                      { length: Math.min(10, getRemainingTicketsForTier(selectedTier)) },
-                      (_, i) => i + 1
-                    ).map((num) => (
-                      <option key={num} value={num} className="bg-zinc-950 text-white">
-                        {num} {num === 1 ? 'place' : 'places'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {!event?.slug.includes('center-parcs') && (
+                  <div>
+                    <label className="block text-xs font-bold text-white/60 uppercase tracking-widest mb-2">
+                      Nombre de Places
+                    </label>
+                    <select
+                      value={ticketCount}
+                      onChange={(e) => setTicketCount(Number(e.target.value))}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-base sm:text-sm focus:outline-none focus:border-purple-500 transition-colors text-white cursor-pointer"
+                    >
+                      {Array.from(
+                        { length: Math.min(10, getRemainingTicketsForTier(selectedTier)) },
+                        (_, i) => i + 1
+                      ).map((num) => (
+                        <option key={num} value={num} className="bg-zinc-950 text-white">
+                          {num} {num === 1 ? 'place' : 'places'}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className="flex justify-between items-center py-3 px-4 bg-white/5 rounded-xl border border-white/5">
                   <span className="text-xs text-white/50">Total à payer :</span>
