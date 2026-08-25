@@ -19,7 +19,8 @@ import {
   Clock, 
   UserCheck, 
   AlertTriangle,
-  FileText
+  FileText,
+  Sparkles
 } from 'lucide-react';
 
 interface PageProps {
