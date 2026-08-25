@@ -156,16 +156,34 @@ export default function EventDetailsPage({ params }: PageProps) {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = {
+  const formatDate = (dateString: string, endDateString?: string | null) => {
+    const start = new Date(dateString);
+    if (!endDateString) {
+      const options: Intl.DateTimeFormatOptions = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      };
+      return start.toLocaleDateString('fr-FR', options);
+    }
+
+    const end = new Date(endDateString);
+    const startOptions: Intl.DateTimeFormatOptions = {
       weekday: 'long',
-      year: 'numeric',
-      month: 'long',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      month: 'long',
     };
-    return new Date(dateString).toLocaleDateString('fr-FR', options);
+    const endOptions: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    };
+
+    return `Du ${start.toLocaleDateString('fr-FR', startOptions)} au ${end.toLocaleDateString('fr-FR', endOptions)}`;
   };
 
   if (loading) {
@@ -180,8 +198,8 @@ export default function EventDetailsPage({ params }: PageProps) {
   if (!event) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6 max-w-md mx-auto text-center px-4 bg-[#050508] text-white">
-        <h2 className="text-3xl font-extrabold text-white">Soirée Introuvable</h2>
-        <p className="text-white/60 text-sm leading-relaxed">Cette soirée n'existe pas ou n'est plus en ligne.</p>
+        <h2 className="text-3xl font-extrabold text-white">Événement Introuvable</h2>
+        <p className="text-white/60 text-sm leading-relaxed">Cet événement n'existe pas ou n'est plus en ligne.</p>
         <Link href="/" className="glow-btn-primary flex items-center gap-2 text-xs">
           <ArrowLeft className="w-4 h-4" /> Retour à l'accueil
         </Link>
@@ -233,6 +251,17 @@ export default function EventDetailsPage({ params }: PageProps) {
         </div>
 
         <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 pb-12">
+          <div className="mb-3">
+            {event.category === 'trip' ? (
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest">
+                ✈️ Voyage
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase tracking-widest">
+                🎵 Soirée
+              </span>
+            )}
+          </div>
           <h1 className="text-4xl sm:text-6xl font-black uppercase tracking-tight text-white mb-2 leading-none neon-text-purple">
             {event.title}
           </h1>
@@ -246,7 +275,7 @@ export default function EventDetailsPage({ params }: PageProps) {
           <div className="flex flex-wrap gap-4 text-xs text-white/60">
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-purple-400" />
-              <span className="capitalize">{formatDate(event.event_date)}</span>
+              <span className="capitalize">{formatDate(event.event_date, event.end_date)}</span>
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-pink-400" />

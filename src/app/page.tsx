@@ -63,16 +63,34 @@ export default function Home() {
 
 
 
-  const formatDate = (dateString: string) => {
-    const options: Intl.DateTimeFormatOptions = {
+  const formatDate = (dateString: string, endDateString?: string | null) => {
+    const start = new Date(dateString);
+    if (!endDateString) {
+      const options: Intl.DateTimeFormatOptions = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      };
+      return start.toLocaleDateString('fr-FR', options);
+    }
+
+    const end = new Date(endDateString);
+    const startOptions: Intl.DateTimeFormatOptions = {
       weekday: 'long',
-      year: 'numeric',
-      month: 'long',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      month: 'long',
     };
-    return new Date(dateString).toLocaleDateString('fr-FR', options);
+    const endOptions: Intl.DateTimeFormatOptions = {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    };
+
+    return `Du ${start.toLocaleDateString('fr-FR', startOptions)} au ${end.toLocaleDateString('fr-FR', endOptions)}`;
   };
 
   const getDayAndMonth = (dateString: string) => {
@@ -146,9 +164,20 @@ export default function Home() {
               {/* Card Details */}
               <div className="p-6 sm:p-12 lg:p-16 flex flex-col justify-end min-h-[50vh] sm:min-h-[55vh] md:min-h-[60vh] max-w-3xl space-y-4 sm:space-y-6">
                 <div>
-                  <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-pink-400 border border-pink-500/30 uppercase tracking-widest mb-4">
-                    🔥 Prochain Événement
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2 mb-4">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-pink-500/10 text-pink-400 border border-pink-500/20 uppercase tracking-widest">
+                      🔥 Prochain Événement
+                    </span>
+                    {featuredEvent.category === 'trip' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest">
+                        ✈️ Voyage
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase tracking-widest">
+                        🎵 Soirée
+                      </span>
+                    )}
+                  </div>
                   
                   <h2 className="text-3xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-white mb-2 leading-none">
                     {featuredEvent.title}
@@ -164,7 +193,7 @@ export default function Home() {
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 text-white/80 text-sm">
                     <Calendar className="w-5 h-5 text-purple-400 flex-shrink-0" />
-                    <span className="capitalize font-semibold">{formatDate(featuredEvent.event_date)}</span>
+                    <span className="capitalize font-semibold">{formatDate(featuredEvent.event_date, featuredEvent.end_date)}</span>
                   </div>
                   <div className="flex items-center gap-3 text-white/80 text-sm">
                     <MapPin className="w-5 h-5 text-pink-400 flex-shrink-0" />
@@ -215,12 +244,19 @@ export default function Home() {
                           </div>
 
                           <div className="space-y-1">
+                            <div className="flex items-center gap-1.5">
+                              {event.category === 'trip' ? (
+                                <span className="text-[9px] font-black text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 uppercase tracking-wider">✈️ Voyage</span>
+                              ) : (
+                                <span className="text-[9px] font-black text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/20 uppercase tracking-wider">🎵 Soirée</span>
+                              )}
+                            </div>
                             <h4 className="font-extrabold text-white text-sm uppercase tracking-wide group-hover:text-pink-400 transition-colors line-clamp-1">
                               {event.title}
                             </h4>
-                            {event.subtitle && (
-                              <p className="text-[11px] text-white/50 line-clamp-1">{event.subtitle}</p>
-                            )}
+                            <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wide">
+                              {formatDate(event.event_date, event.end_date)}
+                            </p>
                           </div>
                         </div>
 

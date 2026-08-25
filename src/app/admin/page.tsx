@@ -87,6 +87,7 @@ export default function AdminDashboardPage() {
         contact_email: 'contact@fmb-experience.com',
         whatsapp_number: '33', // code international standard de base
         status: 'draft',
+        category: 'party',
       };
 
       const { data, error } = await supabase
@@ -566,7 +567,7 @@ export default function AdminDashboardPage() {
                     )}
 
                     {/* Status Badge */}
-                    <div className="absolute top-3 left-3">
+                    <div className="absolute top-3 left-3 flex gap-1.5">
                       {event.status === 'draft' && (
                         <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700 text-[9px] uppercase font-bold tracking-wider">
                           Brouillon
@@ -574,12 +575,22 @@ export default function AdminDashboardPage() {
                       )}
                       {event.status === 'upcoming' && (
                         <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] uppercase font-bold tracking-wider">
-                          En ligne (À venir)
+                          En ligne
                         </span>
                       )}
                       {event.status === 'past' && (
                         <span className="px-2 py-0.5 rounded bg-zinc-800 text-zinc-500 text-[9px] uppercase font-bold tracking-wider">
-                          Terminé (Passé)
+                          Terminé
+                        </span>
+                      )}
+                      
+                      {event.category === 'trip' ? (
+                        <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[9px] uppercase font-bold tracking-wider">
+                          ✈️ Voyage
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20 text-[9px] uppercase font-bold tracking-wider">
+                          🎵 Soirée
                         </span>
                       )}
                     </div>
@@ -598,13 +609,17 @@ export default function AdminDashboardPage() {
                       <div className="flex items-center gap-2">
                         <Clock className="w-3.5 h-3.5 text-zinc-500 flex-shrink-0" />
                         <span className="line-clamp-1">
-                          {new Date(event.event_date).toLocaleString('fr-FR', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
+                          {event.category === 'trip' && event.end_date ? (
+                            `Du ${new Date(event.event_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} au ${new Date(event.end_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                          ) : (
+                            new Date(event.event_date).toLocaleString('fr-FR', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })
+                          )}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">

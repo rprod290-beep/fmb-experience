@@ -7,6 +7,8 @@ export interface Event {
   title: string;
   subtitle: string | null;
   event_date: string;
+  end_date: string | null;
+  category: 'party' | 'trip';
   description: string | null;
   secret_address: string | null; // Note: null pour les requêtes publiques via la vue
   cover_image_url: string | null;

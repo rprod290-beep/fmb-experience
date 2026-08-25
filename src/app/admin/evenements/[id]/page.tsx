@@ -89,9 +89,13 @@ export default function EditEventPage({ params }: PageProps) {
 
       // Convertir la date TIMESTAMPTZ en format YYYY-MM-DDThh:mm pour l'input datetime-local
       const localDate = new Date(eventData.event_date).toISOString().slice(0, 16);
+      const localEndDate = eventData.end_date 
+        ? new Date(eventData.end_date).toISOString().slice(0, 16) 
+        : '';
       setEvent({
         ...eventData,
-        event_date: localDate
+        event_date: localDate,
+        end_date: localEndDate
       });
 
       // 2. Charger les DJs
@@ -135,9 +139,21 @@ export default function EditEventPage({ params }: PageProps) {
     try {
       // 1. Sauvegarder les infos de l'événement
       const isoDate = new Date(event.event_date || '').toISOString();
+      const isoEndDate = event.end_date ? new Date(event.end_date).toISOString() : null;
       const payload = {
-        ...event,
-        event_date: isoDate
+        title: event.title,
+        slug: event.slug,
+        subtitle: event.subtitle,
+        description: event.description,
+        secret_address: event.secret_address,
+        cover_image_url: event.cover_image_url,
+        contact_email: event.contact_email,
+        instagram_url: event.instagram_url,
+        whatsapp_number: event.whatsapp_number,
+        status: event.status,
+        category: event.category || 'party',
+        event_date: isoDate,
+        end_date: isoEndDate
       };
 
       const { error } = await supabase
@@ -517,11 +533,11 @@ export default function EditEventPage({ params }: PageProps) {
           <form onSubmit={handleSaveGeneralInfo} className="space-y-4 text-xs text-zinc-400">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block font-semibold mb-1.5 text-zinc-300">Titre de la soirée</label>
+                <label className="block font-semibold mb-1.5 text-zinc-300">Titre de l'événement</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ex: DEAD OR ALIVE"
+                  placeholder="Ex: DEAD OR ALIVE ou Center Parcs"
                   value={event.title || ''}
                   onChange={(e) => setEvent({ ...event, title: e.target.value })}
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-purple-500"
@@ -552,9 +568,21 @@ export default function EditEventPage({ params }: PageProps) {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block font-semibold mb-1.5 text-zinc-300">Date et Heure</label>
+                <label className="block font-semibold mb-1.5 text-zinc-300">Catégorie</label>
+                <select
+                  value={event.category || 'party'}
+                  onChange={(e: any) => setEvent({ ...event, category: e.target.value })}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-purple-500 cursor-pointer"
+                >
+                  <option value="party">🎵 Soirée</option>
+                  <option value="trip">✈️ Voyage</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1.5 text-zinc-300">Date de Début</label>
                 <input
                   type="datetime-local"
                   required
@@ -564,6 +592,18 @@ export default function EditEventPage({ params }: PageProps) {
                 />
               </div>
 
+              <div>
+                <label className="block font-semibold mb-1.5 text-zinc-300">Date de Fin (Voyages)</label>
+                <input
+                  type="datetime-local"
+                  value={event.end_date || ''}
+                  onChange={(e) => setEvent({ ...event, end_date: e.target.value })}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-purple-500 cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block font-semibold mb-1.5 text-zinc-300">Statut de publication</label>
                 <select
@@ -576,14 +616,12 @@ export default function EditEventPage({ params }: PageProps) {
                   <option value="past">Passé (Visible dans la catégorie "Passés")</option>
                 </select>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block font-semibold mb-1.5 text-zinc-300">Adresse secrète (Uniquement révélée après confirmation du reçu)</label>
+                <label className="block font-semibold mb-1.5 text-zinc-300">Adresse secrète / Lieu (dévoilé après validation)</label>
                 <input
                   type="text"
-                  placeholder="Ex: 45 Rue Pierre Charron, Paris"
+                  placeholder="Ex: 45 Rue Pierre Charron, Paris ou Center Parcs"
                   value={event.secret_address || ''}
                   onChange={(e) => setEvent({ ...event, secret_address: e.target.value })}
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-purple-500"
