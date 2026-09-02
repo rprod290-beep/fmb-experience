@@ -1098,6 +1098,16 @@ export default function EditEventPage({ params }: PageProps) {
                             onChange={(e) => handleUpdateBuyerName(buyer.id, e.target.value)}
                             className="bg-transparent border-b border-transparent hover:border-zinc-800 focus:border-purple-500 focus:outline-none py-1 text-white font-semibold w-full text-xs"
                           />
+                          {buyer.additional_participants && buyer.additional_participants.length > 0 && (
+                            <div className="mt-1.5 flex flex-wrap gap-1">
+                              <span className="text-[9px] font-bold text-zinc-400 block w-full">Participants :</span>
+                              {buyer.additional_participants.map((part, pIdx) => (
+                                <span key={pIdx} className="text-[9px] bg-purple-500/10 text-purple-300 border border-purple-500/20 px-1.5 py-0.5 rounded font-medium">
+                                  👤 {part}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </td>
                         {/* Tier Label */}
                         <td className="px-6 py-4">
@@ -1135,7 +1145,7 @@ export default function EditEventPage({ params }: PageProps) {
                           <select
                             value={buyer.status}
                             onChange={(e: any) => handleUpdateBuyerStatus(buyer.id, e.target.value)}
-                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase focus:outline-none cursor-pointer border ${
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase focus:outline-none cursor-pointer border w-full ${
                               buyer.status === 'pending' 
                                 ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
                                 : buyer.status === 'verified'
@@ -1144,9 +1154,18 @@ export default function EditEventPage({ params }: PageProps) {
                             }`}
                           >
                             <option value="pending" className="bg-zinc-950 text-amber-500">⏳ En attente</option>
-                            <option value="verified" className="bg-zinc-950 text-emerald-400">✅ Payé / Vérifié</option>
+                            <option value="verified" className="bg-zinc-950 text-emerald-400">✅ Payé / Validé</option>
                             <option value="added_close_friends" className="bg-zinc-950 text-pink-400">⭐️ Amis Proches</option>
                           </select>
+                          {buyer.status === 'pending' && (
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateBuyerStatus(buyer.id, 'verified')}
+                              className="mt-1.5 px-2 py-1 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-lg text-[9px] font-bold uppercase transition-colors flex items-center gap-1 w-full justify-center"
+                            >
+                              🟢 Valider le virement
+                            </button>
+                          )}
                         </td>
                         {/* Notes Input */}
                         <td className="px-6 py-4">

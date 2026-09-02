@@ -19,7 +19,11 @@ import {
   X, 
   ExternalLink,
   Info,
-  Users
+  Users,
+  Copy,
+  Building2,
+  Landmark,
+  CheckCircle2
 } from 'lucide-react';
 
 interface PageProps {
@@ -46,6 +50,17 @@ export default function EventDetailsPage({ params }: PageProps) {
   const [participants, setParticipants] = useState<string[]>([]);
   const [registering, setRegistering] = useState(false);
   const [registrationError, setRegistrationError] = useState('');
+
+  // Wire Transfer Modal State
+  const [wireSuccessData, setWireSuccessData] = useState<{
+    code: string;
+    tierLabel: string;
+    price: number;
+    leader: string;
+    participants: string[];
+  } | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedIban, setCopiedIban] = useState(false);
 
   useEffect(() => {
     if (selectedTier && selectedTier.capacity && selectedTier.capacity > 1) {
@@ -180,6 +195,58 @@ export default function EventDetailsPage({ params }: PageProps) {
         router.push(`/evenements/${event.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(savedLabel)}&quantity=${ticketCount}`);
       } else {
         setRegistrationError(result.error || "Une erreur s'est produite lors de l'enregistrement.");
+      }
+    } catch (err) {
+      console.error(err);
+      setRegistrationError("Erreur lors de la réservation.");
+    } finally {
+      setRegistering(false);
+    }
+  };
+
+  const handleRegisterWireTransfer = async () => {
+    if (!selectedTier || !event) return;
+
+    if (!buyerName.trim()) {
+      setRegistrationError("Veuillez saisir votre prénom avant de procéder à la réservation.");
+      return;
+    }
+
+    if (event.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1) {
+      if (participants.some(p => !p.trim())) {
+        setRegistrationError("Veuillez renseigner les prénoms de tous les participants.");
+        return;
+      }
+    }
+
+    setRegistrationError('');
+    setRegistering(true);
+
+    try {
+      const partsToSend = event.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1 
+        ? participants.map(p => p.trim()) 
+        : null;
+
+      const result = await registerBuyer(
+        event.id, 
+        buyerName.trim(), 
+        selectedTier.label, 
+        ticketCount, 
+        'pending',
+        selectedTier.id,
+        partsToSend
+      );
+
+      if (result.success && result.confirmationCode) {
+        setWireSuccessData({
+          code: result.confirmationCode,
+          tierLabel: selectedTier.label,
+          price: ticketCount * selectedTier.price,
+          leader: buyerName.trim(),
+          participants: partsToSend || []
+        });
+      } else {
+        setRegistrationError(result.error || "Une erreur s'est produite lors de la réservation.");
       }
     } catch (err) {
       console.error(err);
@@ -588,203 +655,319 @@ export default function EventDetailsPage({ params }: PageProps) {
                 setBuyerName('');
                 setTicketCount(1);
                 setRegistrationError('');
+                setWireSuccessData(null);
               }}
-              className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors"
+              className="absolute top-4 right-4 text-white/40 hover:text-white transition-colors z-10"
             >
               <X className="w-5 h-5" />
             </button>
 
-            <div className="p-5 sm:p-8 space-y-5 sm:space-y-6">
-              <div>
-                <span className="text-[10px] font-bold text-pink-500 uppercase tracking-widest bg-pink-500/10 px-2 py-0.5 rounded border border-pink-500/20">
-                  Réservation
-                </span>
-                <h3 className="text-xl font-black text-white uppercase mt-2">
-                  {event?.slug.includes('center-parcs') ? "Réservation du cottage" : "Qui réserve ce billet ?"}
-                </h3>
-                <p className="text-xs text-white/40 mt-1">
-                  {event?.slug.includes('center-parcs') 
-                    ? `Saisissez les prénoms des occupants pour votre cottage : ${selectedTier.label}` 
-                    : `Vous avez choisi le tarif ${selectedTier.label} (${selectedTier.price.toFixed(2)} €).`}
-                </p>
-                {selectedTier.description && (
-                  <p className="text-[11px] text-white/60 mt-3 bg-white/[0.03] p-3 rounded-xl border border-white/5 leading-relaxed font-medium">
-                    {selectedTier.description}
-                  </p>
-                )}
-              </div>
+            {wireSuccessData ? (
+              <div className="p-6 sm:p-8 space-y-6 text-center">
+                <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto animate-bounce">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
 
-              <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold text-white/60 uppercase tracking-widest mb-2">
-                    {event?.slug.includes('center-parcs') ? "Responsable de la réservation (Prénom)" : (event?.category === 'trip' ? 'Responsable de la réservation' : 'Nom Complet ou Pseudo')}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ex: David"
-                    value={buyerName}
-                    onChange={(e) => setBuyerName(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-base sm:text-sm focus:outline-none focus:border-purple-500 transition-colors text-white"
-                  />
-                  <p className="text-[9px] text-white/30 mt-1.5 flex items-start gap-1">
-                    <Info className="w-3.5 h-3.5 flex-shrink-0" />
-                    {event?.slug.includes('center-parcs') 
-                      ? "Ce prénom sera utilisé pour l'enregistrement principal du cottage." 
-                      : "Ce nom permettra aux organisateurs d'associer votre paiement à votre billet."}
+                  <span className="text-[10px] font-extrabold text-emerald-400 uppercase tracking-widest bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+                    Demande Enregistrée
+                  </span>
+                  <h3 className="text-xl font-black text-white uppercase mt-3">
+                    Virement Bancaire Requis
+                  </h3>
+                  <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                    Votre réservation pour <b>{wireSuccessData.tierLabel}</b> est bien enregistrée. Effectuez votre virement pour valider vos places.
                   </p>
                 </div>
 
-                {event?.category === 'trip' && selectedTier && selectedTier.capacity && selectedTier.capacity > 1 && (
-                  <div className="space-y-4 pt-4 border-t border-white/5 mt-4">
-                    <span className="block text-xs font-bold text-emerald-400 uppercase tracking-widest">
-                      {event?.slug.includes('center-parcs')
-                        ? `Prénoms des autres personnes occupant le cottage (${selectedTier.capacity - 1} pers.)`
-                        : `Prénoms des autres participants (${selectedTier.capacity - 1} pers.)`}
-                    </span>
-                    {participants.map((p, idx) => (
-                      <div key={idx} className="space-y-1">
-                        <label className="block text-[10px] font-bold text-white/50 uppercase tracking-wider">
-                          Occupant {idx + 2}
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          placeholder={`Prénom complet de l'occupant ${idx + 2}`}
-                          value={p}
-                          onChange={(e) => {
-                            const newParts = [...participants];
-                            newParts[idx] = e.target.value;
-                            setParticipants(newParts);
-                          }}
-                          className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:border-emerald-500 transition-colors text-white"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {!event?.slug.includes('center-parcs') && (
-                  <div>
-                    <label className="block text-xs font-bold text-white/60 uppercase tracking-widest mb-2">
-                      Nombre de Places
-                    </label>
-                    <select
-                      value={ticketCount}
-                      onChange={(e) => setTicketCount(Number(e.target.value))}
-                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-base sm:text-sm focus:outline-none focus:border-purple-500 transition-colors text-white cursor-pointer"
-                    >
-                      {Array.from(
-                        { length: Math.min(10, getRemainingTicketsForTier(selectedTier)) },
-                        (_, i) => i + 1
-                      ).map((num) => (
-                        <option key={num} value={num} className="bg-zinc-950 text-white">
-                          {num} {num === 1 ? 'place' : 'places'}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div className="flex justify-between items-center py-3 px-4 bg-white/5 rounded-xl border border-white/5">
-                  <span className="text-xs text-white/50">Total à payer :</span>
-                  <span className="text-sm font-extrabold text-white">
-                    {(ticketCount * selectedTier.price).toFixed(2)} € <span className="text-[10px] text-white/40 font-normal">({ticketCount} x {selectedTier.price.toFixed(2)} €)</span>
+                {/* Référence obligatoire */}
+                <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-2xl text-left space-y-1.5">
+                  <span className="text-[10px] font-bold text-purple-300 uppercase tracking-wider block">
+                    ⚠️ Motif / Libellé obligatoire du virement :
                   </span>
-                </div>
-
-                {registrationError && (
-                  <p className="text-xs text-pink-500 font-semibold">{registrationError}</p>
-                )}
-
-                <div className="space-y-3 pt-2">
-                  {selectedTier.price > 0 ? (
-                    <div className="pt-2">
-                      <PayPalButtons
-                        style={{ layout: "vertical", shape: "rect", label: "pay" }}
-                        createOrder={(data, actions) => {
-                          return actions.order.create({
-                            purchase_units: [{
-                              amount: {
-                                currency_code: "EUR",
-                                value: (ticketCount * selectedTier.price).toString()
-                              },
-                              description: `Billet ${selectedTier.label} - ${ticketCount} place(s) pour FMB Experience`
-                            }]
-                          });
-                        }}
-                        onClick={(data, actions) => {
-                          if (!buyerName.trim()) {
-                            setRegistrationError("Veuillez saisir votre nom complet avant de procéder au paiement.");
-                            return actions.reject();
-                          }
-                          if (event?.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1) {
-                            if (participants.some(p => !p.trim())) {
-                              setRegistrationError("Veuillez renseigner le nom de tous les participants.");
-                              return actions.reject();
-                            }
-                          }
-                          setRegistrationError('');
-                          return actions.resolve();
-                        }}
-                        onApprove={async (data, actions) => {
-                          if (!actions.order) return;
-                          setRegistering(true);
-                          try {
-                            const details = await actions.order.capture();
-                            // Payment is captured successfully!
-                            // Register the buyer with 'verified' (paid) status directly
-                            const partsToSend = event!.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1 
-                              ? participants.map(p => p.trim()) 
-                              : null;
-
-                            const result = await registerBuyer(
-                              event!.id, 
-                              buyerName.trim(), 
-                              selectedTier.label, 
-                              ticketCount, 
-                              'verified',
-                              selectedTier.id,
-                              partsToSend
-                            );
-                            if (result.success && result.confirmationCode) {
-                              const savedLabel = selectedTier.label;
-                              // Reset state
-                              setSelectedTier(null);
-                              setBuyerName('');
-                              setTicketCount(1);
-                              setParticipants([]);
-                              // Redirect to success page
-                              router.push(`/evenements/${event!.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(savedLabel)}&quantity=${ticketCount}`);
-                            } else {
-                              setRegistrationError(result.error || "Paiement réussi mais échec de l'enregistrement. Contactez le support.");
-                            }
-                          } catch (err) {
-                            console.error(err);
-                            setRegistrationError("Une erreur s'est produite lors de la validation du paiement.");
-                          } finally {
-                            setRegistering(false);
-                          }
-                        }}
-                        onError={(err) => {
-                          console.error("PayPal Error:", err);
-                          setRegistrationError("Échec du traitement par PayPal. Veuillez réessayer.");
-                        }}
-                      />
-                    </div>
-                  ) : (
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono font-black text-lg text-white tracking-widest select-all">
+                      {wireSuccessData.code}
+                    </span>
                     <button
                       type="button"
-                      disabled={registering}
-                      onClick={handleRegisterFreeTicket}
-                      className="glow-btn-primary w-full py-3.5 text-xs flex items-center justify-center gap-1.5 uppercase font-bold tracking-widest"
+                      onClick={() => {
+                        navigator.clipboard.writeText(wireSuccessData.code);
+                        setCopiedCode(true);
+                        setTimeout(() => setCopiedCode(false), 2000);
+                      }}
+                      className="px-3 py-1.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-xl text-[10px] font-bold uppercase transition-colors flex items-center gap-1.5"
                     >
-                      {registering ? 'Création...' : 'Réserver ma place gratuite'}
+                      {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      {copiedCode ? 'Copié !' : 'Copier'}
                     </button>
+                  </div>
+                </div>
+
+                {/* RIB / Coordonnées bancaires */}
+                <div className="p-4 bg-white/5 border border-white/10 rounded-2xl text-left space-y-3">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                    <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <Landmark className="w-4 h-4 text-emerald-400" /> RIB / Coordonnées Bancaires
+                    </span>
+                    <span className="text-xs font-black text-emerald-400">
+                      {wireSuccessData.price.toFixed(2)} €
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5 text-xs">
+                    <div>
+                      <span className="text-[10px] text-zinc-400 font-medium block">Titulaire du compte :</span>
+                      <span className="font-bold text-white">FMB Experience</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-zinc-400 font-medium block">IBAN :</span>
+                      <div className="flex items-center justify-between gap-2 mt-0.5">
+                        <span className="font-mono font-bold text-emerald-400 text-xs sm:text-sm select-all">
+                          FR76 2823 3000 0128 8413 5530 384
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText('FR7628233000012884135530384');
+                            setCopiedIban(true);
+                            setTimeout(() => setCopiedIban(false), 2000);
+                          }}
+                          className="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[9px] font-bold uppercase transition-colors flex items-center gap-1"
+                        >
+                          {copiedIban ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                          {copiedIban ? 'Copié !' : 'Copier IBAN'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Accompanists recap */}
+                {wireSuccessData.participants.length > 0 && (
+                  <div className="text-left space-y-1 bg-white/[0.02] p-3 rounded-xl border border-white/5 text-xs">
+                    <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">
+                      Groupe & Participants enregistrés :
+                    </span>
+                    <p className="text-white/80 font-medium leading-relaxed">
+                      <b className="text-white">Responsable :</b> {wireSuccessData.leader}<br />
+                      <b className="text-white">Autres occupants :</b> {wireSuccessData.participants.join(', ')}
+                    </p>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWireSuccessData(null);
+                    setSelectedTier(null);
+                    setBuyerName('');
+                    setParticipants([]);
+                  }}
+                  className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black rounded-xl text-xs uppercase tracking-wider transition-all shadow-[0_0_20px_rgba(16,185,129,0.2)]"
+                >
+                  J'ai effectué mon virement (Fermer)
+                </button>
+              </div>
+            ) : (
+              <div className="p-5 sm:p-8 space-y-5 sm:space-y-6">
+                <div>
+                  <span className="text-[10px] font-bold text-pink-500 uppercase tracking-widest bg-pink-500/10 px-2 py-0.5 rounded border border-pink-500/20">
+                    Réservation
+                  </span>
+                  <h3 className="text-xl font-black text-white uppercase mt-2">
+                    {event?.slug.includes('center-parcs') ? "Réservation du cottage" : "Qui réserve ce billet ?"}
+                  </h3>
+                  <p className="text-xs text-white/40 mt-1">
+                    {event?.slug.includes('center-parcs') 
+                      ? `Saisissez les prénoms des occupants pour votre cottage : ${selectedTier.label}` 
+                      : `Vous avez choisi le tarif ${selectedTier.label} (${selectedTier.price.toFixed(2)} €).`}
+                  </p>
+                  {selectedTier.description && (
+                    <p className="text-[11px] text-white/60 mt-3 bg-white/[0.03] p-3 rounded-xl border border-white/5 leading-relaxed font-medium">
+                      {selectedTier.description}
+                    </p>
                   )}
                 </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-white/60 uppercase tracking-widest mb-2">
+                      {event?.slug.includes('center-parcs') ? "Responsable de la réservation (Prénom)" : (event?.category === 'trip' ? 'Responsable de la réservation' : 'Nom Complet ou Pseudo')}
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: David"
+                      value={buyerName}
+                      onChange={(e) => setBuyerName(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-base sm:text-sm focus:outline-none focus:border-purple-500 transition-colors text-white"
+                    />
+                    <p className="text-[9px] text-white/30 mt-1.5 flex items-start gap-1">
+                      <Info className="w-3.5 h-3.5 flex-shrink-0" />
+                      {event?.slug.includes('center-parcs') 
+                        ? "Ce prénom sera utilisé pour l'enregistrement principal du cottage." 
+                        : "Ce nom permettra aux organisateurs d'associer votre paiement à votre billet."}
+                    </p>
+                  </div>
+
+                  {event?.category === 'trip' && selectedTier && selectedTier.capacity && selectedTier.capacity > 1 && (
+                    <div className="space-y-4 pt-4 border-t border-white/5 mt-4">
+                      <span className="block text-xs font-bold text-emerald-400 uppercase tracking-widest">
+                        {event?.slug.includes('center-parcs')
+                          ? `Prénoms des autres personnes occupant le cottage (${selectedTier.capacity - 1} pers.)`
+                          : `Prénoms des autres participants (${selectedTier.capacity - 1} pers.)`}
+                      </span>
+                      {participants.map((p, idx) => (
+                        <div key={idx} className="space-y-1">
+                          <label className="block text-[10px] font-bold text-white/50 uppercase tracking-wider">
+                            Occupant {idx + 2}
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder={`Prénom complet de l'occupant ${idx + 2}`}
+                            value={p}
+                            onChange={(e) => {
+                              const newParts = [...participants];
+                              newParts[idx] = e.target.value;
+                              setParticipants(newParts);
+                            }}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:border-emerald-500 transition-colors text-white"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {!event?.slug.includes('center-parcs') && (
+                    <div>
+                      <label className="block text-xs font-bold text-white/60 uppercase tracking-widest mb-2">
+                        Nombre de Places
+                      </label>
+                      <select
+                        value={ticketCount}
+                        onChange={(e) => setTicketCount(Number(e.target.value))}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-base sm:text-sm focus:outline-none focus:border-purple-500 transition-colors text-white cursor-pointer"
+                      >
+                        {Array.from(
+                          { length: Math.min(10, getRemainingTicketsForTier(selectedTier)) },
+                          (_, i) => i + 1
+                        ).map((num) => (
+                          <option key={num} value={num} className="bg-zinc-950 text-white">
+                            {num} {num === 1 ? 'place' : 'places'}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center py-3 px-4 bg-white/5 rounded-xl border border-white/5">
+                    <span className="text-xs text-white/50">Total à payer :</span>
+                    <span className="text-sm font-extrabold text-white">
+                      {(ticketCount * selectedTier.price).toFixed(2)} € <span className="text-[10px] text-white/40 font-normal">({ticketCount} x {selectedTier.price.toFixed(2)} €)</span>
+                    </span>
+                  </div>
+
+                  {registrationError && (
+                    <p className="text-xs text-pink-500 font-semibold">{registrationError}</p>
+                  )}
+
+                  <div className="space-y-3 pt-2">
+                    {event?.category === 'trip' ? (
+                      <button
+                        type="button"
+                        disabled={registering}
+                        onClick={handleRegisterWireTransfer}
+                        className="glow-btn-primary w-full py-4 text-xs flex items-center justify-center gap-2 uppercase font-black tracking-widest bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.3)]"
+                      >
+                        <Landmark className="w-4 h-4" />
+                        {registering ? 'Enregistrement...' : 'Confirmer la réservation par Virement'}
+                      </button>
+                    ) : selectedTier.price > 0 ? (
+                      <div className="pt-2">
+                        <PayPalButtons
+                          style={{ layout: "vertical", shape: "rect", label: "pay" }}
+                          createOrder={(data, actions) => {
+                            return actions.order.create({
+                              purchase_units: [{
+                                amount: {
+                                  currency_code: "EUR",
+                                  value: (ticketCount * selectedTier.price).toString()
+                                },
+                                description: `Billet ${selectedTier.label} - ${ticketCount} place(s) pour FMB Experience`
+                              }]
+                            });
+                          }}
+                          onClick={(data, actions) => {
+                            if (!buyerName.trim()) {
+                              setRegistrationError("Veuillez saisir votre nom complet avant de procéder au paiement.");
+                              return actions.reject();
+                            }
+                            if (event?.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1) {
+                              if (participants.some(p => !p.trim())) {
+                                setRegistrationError("Veuillez renseigner le nom de tous les participants.");
+                                return actions.reject();
+                              }
+                            }
+                            setRegistrationError('');
+                            return actions.resolve();
+                          }}
+                          onApprove={async (data, actions) => {
+                            if (!actions.order) return;
+                            setRegistering(true);
+                            try {
+                              const details = await actions.order.capture();
+                              const partsToSend = event!.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1 
+                                ? participants.map(p => p.trim()) 
+                                : null;
+
+                              const result = await registerBuyer(
+                                event!.id, 
+                                buyerName.trim(), 
+                                selectedTier.label, 
+                                ticketCount, 
+                                'verified',
+                                selectedTier.id,
+                                partsToSend
+                              );
+                              if (result.success && result.confirmationCode) {
+                                const savedLabel = selectedTier.label;
+                                setSelectedTier(null);
+                                setBuyerName('');
+                                setTicketCount(1);
+                                setParticipants([]);
+                                router.push(`/evenements/${event!.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(savedLabel)}&quantity=${ticketCount}`);
+                              } else {
+                                setRegistrationError(result.error || "Paiement réussi mais échec de l'enregistrement. Contactez le support.");
+                              }
+                            } catch (err) {
+                              console.error(err);
+                              setRegistrationError("Une erreur s'est produite lors de la validation du paiement.");
+                            } finally {
+                              setRegistering(false);
+                            }
+                          }}
+                          onError={(err) => {
+                            console.error("PayPal Error:", err);
+                            setRegistrationError("Échec du traitement par PayPal. Veuillez réessayer.");
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={registering}
+                        onClick={handleRegisterFreeTicket}
+                        className="glow-btn-primary w-full py-3.5 text-xs flex items-center justify-center gap-1.5 uppercase font-bold tracking-widest"
+                      >
+                        {registering ? 'Création...' : 'Réserver ma place gratuite'}
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
