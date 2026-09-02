@@ -14,8 +14,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "FMB Expérience",
-  description: "L'expérience exclusive de la nightlife.",
+  title: "FMB Expérience - Événements, Séjours & Expériences Exclusives",
+  description: "Découvrez nos événements éphémères, soirées privées, séjours Center Parcs et escapades d'exception.",
 };
 
 export const viewport: Viewport = {

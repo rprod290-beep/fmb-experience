@@ -14,16 +14,16 @@ export default function Home() {
 
   const faqItems = [
     {
-      q: "Comment recevoir l'adresse secrète ?",
-      a: "Une fois votre billet réservé et votre paiement PayPal effectué, votre code unique est activé automatiquement. Il vous suffit alors d'entrer ce code dans la section 'Lieu' de l'événement pour dévoiler l'adresse exacte en direct sur votre écran."
+      q: "Comment fonctionne la réservation d'un événement ou d'un séjour ?",
+      a: "Sélectionnez simplement la soirée ou le voyage de votre choix. Selon l'événement, vous pouvez régler par Carte / PayPal ou effectuer un virement bancaire sur le RIB avec votre code de référence unique."
     },
     {
-      q: "Le paiement en ligne est-il sécurisé ?",
-      a: "Oui, à 100%. Les transactions s'effectuent directement via le protocole sécurisé de PayPal. Vos données bancaires sont cryptées de bout en bout et ne transitent jamais par notre site."
+      q: "Les paiements sont-ils sécurisés ?",
+      a: "Oui, à 100%. Les transactions par carte s'effectuent via le protocole sécurisé de PayPal. Pour les virements bancaires, la validation s'effectue manuellement dès réception des fonds par l'organisation."
     },
     {
-      q: "Puis-je acheter mon billet directement sur place ?",
-      a: "Non, aucune billetterie n'est disponible sur place. Pour garantir l'ambiance intimiste et le respect des jauges de nos lieux d'exception, l'accès se fait exclusivement en prévente réservée en ligne."
+      q: "Puis-je réserver sur place le jour même ?",
+      a: "Non, aucune billetterie n'est disponible sur place. Pour garantir la qualité des prestations, la gestion des cottages et le respect des jauges, l'accès se fait exclusivement sur réservation préalable en ligne."
     }
   ];
 
@@ -131,7 +131,7 @@ export default function Home() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-32 gap-4">
             <div className="w-12 h-12 rounded-full border-2 border-pink-500/20 border-t-pink-500 animate-spin"></div>
-            <p className="text-white/40 text-xs">Chargement des soirées...</p>
+            <p className="text-white/40 text-xs">Chargement des événements et séjours...</p>
           </div>
         ) : !featuredEvent ? (
           // Empty State
@@ -289,7 +289,7 @@ export default function Home() {
                   Bienvenue dans l'inédit
                 </h3>
                 <p className="text-white/50 text-sm leading-relaxed">
-                  FMB EXPÉRIENCE n'est pas qu'une simple soirée. C'est un concept événementiel éphémère conçu pour réunir les passionnés de nightlife autour de la meilleure sélection musicale et de cadres d'exception.
+                  FMB EXPÉRIENCE crée des moments d'exception. Que ce soit pour une soirée privée mémorable ou un séjour immersif entre amis (voyages, cottages, escapades), nous sélectionnons des cadres d'exception et une ambiance inégalée.
                 </p>
               </div>
 
@@ -299,9 +299,9 @@ export default function Home() {
                   <div className="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
                     <MapPin className="w-5 h-5" />
                   </div>
-                  <h4 className="font-extrabold text-white text-base uppercase tracking-wider">Lieux Secrets</h4>
+                  <h4 className="font-extrabold text-white text-base uppercase tracking-wider">Lieux & Destinations Exclusifs</h4>
                   <p className="text-white/40 text-xs leading-relaxed">
-                    Chaque événement se déroule dans un lieu unique et privatisé, tenu secret jusqu'au dernier moment. L'adresse exacte n'est révélée qu'aux détenteurs d'un billet vérifié.
+                    Des domaines privatisés aux cottages haut de gamme (Center Parcs, escapades), chaque événement ou séjour se déroule dans un cadre d'exception soigneusement sélectionné.
                   </p>
                 </div>
 
@@ -310,9 +310,9 @@ export default function Home() {
                   <div className="w-10 h-10 rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400">
                     <Music className="w-5 h-5" />
                   </div>
-                  <h4 className="font-extrabold text-white text-base uppercase tracking-wider">Musique D'Élite</h4>
+                  <h4 className="font-extrabold text-white text-base uppercase tracking-wider">Ambiances Sur-Mesure</h4>
                   <p className="text-white/40 text-xs leading-relaxed">
-                    Vibrez au son d'une sélection musicale pointue distillée par des line-ups de DJs de premier plan et des invités de marque.
+                    Vibrez au son d'une atmosphère raffinée, rythmée par nos meilleures sélections musicales, line-ups de DJs de premier plan et animations exclusives.
                   </p>
                 </div>
 
@@ -321,9 +321,9 @@ export default function Home() {
                   <div className="w-10 h-10 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400">
                     <ShieldCheck className="w-5 h-5" />
                   </div>
-                  <h4 className="font-extrabold text-white text-base uppercase tracking-wider">Immersion Sécurisée</h4>
+                  <h4 className="font-extrabold text-white text-base uppercase tracking-wider">Immersion & Sécurité</h4>
                   <p className="text-white/40 text-xs leading-relaxed">
-                    Des jauges intimistes et un système d'approbation manuelle des réservations pour vous assurer une sécurité totale et une ambiance de qualité tout au long de la nuit.
+                    Des jauges maîtrisées, un système d'enregistrement sur-mesure pour les groupes et un accompagnement dédié pour vous garantir une expérience inoubliable.
                   </p>
                 </div>
               </div>
@@ -388,7 +388,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="text-center md:text-left">
             <span className="font-black tracking-widest text-sm text-white/80">FMB EXPÉRIENCE</span>
-            <p className="mt-1 font-light">L'expérience exclusive de la nightlife.</p>
+            <p className="mt-1 font-light">Créateur d'événements, séjours & expériences d'exception.</p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
