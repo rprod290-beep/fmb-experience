@@ -61,6 +61,7 @@ export default function EventDetailsPage({ params }: PageProps) {
   } | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedIban, setCopiedIban] = useState(false);
+  const [activePaymentTab, setActivePaymentTab] = useState<'paypal' | 'wire'>('paypal');
 
   useEffect(() => {
     if (selectedTier && selectedTier.capacity && selectedTier.capacity > 1) {
@@ -68,7 +69,12 @@ export default function EventDetailsPage({ params }: PageProps) {
     } else {
       setParticipants([]);
     }
-  }, [selectedTier]);
+    if (event?.payment_mode === 'wire_transfer') {
+      setActivePaymentTab('wire');
+    } else {
+      setActivePaymentTab('paypal');
+    }
+  }, [selectedTier, event]);
 
   useEffect(() => {
     async function fetchEventData() {
@@ -874,7 +880,36 @@ export default function EventDetailsPage({ params }: PageProps) {
                   )}
 
                   <div className="space-y-3 pt-2">
-                    {event?.category === 'trip' ? (
+                    {/* Render Tab selector if mode is 'both' or fallback */}
+                    {(!event?.payment_mode || event.payment_mode === 'both') && selectedTier.price > 0 && (
+                      <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 mb-3">
+                        <button
+                          type="button"
+                          onClick={() => setActivePaymentTab('paypal')}
+                          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                            activePaymentTab === 'paypal'
+                              ? 'bg-purple-600 text-white shadow-lg'
+                              : 'text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          💳 Carte / PayPal
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActivePaymentTab('wire')}
+                          className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
+                            activePaymentTab === 'wire'
+                              ? 'bg-emerald-600 text-white shadow-lg'
+                              : 'text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          🏦 Virement (RIB)
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Mode Virement */}
+                    {(event?.payment_mode === 'wire_transfer' || (event?.payment_mode !== 'paypal' && activePaymentTab === 'wire')) ? (
                       <button
                         type="button"
                         disabled={registering}

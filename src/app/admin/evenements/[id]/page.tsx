@@ -156,6 +156,7 @@ export default function EditEventPage({ params }: PageProps) {
         instagram_url: event.instagram_url,
         whatsapp_number: event.whatsapp_number,
         status: event.status,
+        payment_mode: event.payment_mode || 'both',
         category: event.category || 'party',
         event_date: isoDate,
         end_date: isoEndDate
@@ -636,7 +637,7 @@ export default function EditEventPage({ params }: PageProps) {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block font-semibold mb-1.5 text-zinc-300">Statut de publication</label>
                 <select
@@ -647,6 +648,19 @@ export default function EditEventPage({ params }: PageProps) {
                   <option value="draft">Brouillon (Non visible sur le site public)</option>
                   <option value="upcoming">À venir (Visible à la une ou en liste)</option>
                   <option value="past">Passé (Visible dans la catégorie "Passés")</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-semibold mb-1.5 text-zinc-300">Paiements acceptés</label>
+                <select
+                  value={event.payment_mode || 'both'}
+                  onChange={(e: any) => setEvent({ ...event, payment_mode: e.target.value })}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-purple-500 cursor-pointer"
+                >
+                  <option value="both">⚡️ Tous (PayPal/Carte + Virement)</option>
+                  <option value="wire_transfer">🏦 Virement bancaire (RIB) uniquement</option>
+                  <option value="paypal">💳 PayPal / Carte uniquement</option>
                 </select>
               </div>
 
