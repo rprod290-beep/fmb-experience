@@ -301,7 +301,7 @@ export default function Home() {
                   </div>
                   <h4 className="font-extrabold text-white text-base uppercase tracking-wider">Lieux & Destinations Exclusifs</h4>
                   <p className="text-white/40 text-xs leading-relaxed">
-                    Des domaines privatisés aux cottages haut de gamme (Center Parcs, escapades), chaque événement ou séjour se déroule dans un cadre d'exception soigneusement sélectionné.
+                    Des domaines privatisés aux hébergements haut de gamme (villas, cottages, séjours), chaque événement ou voyage se déroule dans un cadre d'exception soigneusement sélectionné.
                   </p>
                 </div>
 

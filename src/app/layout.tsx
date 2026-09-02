@@ -15,7 +15,7 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: "FMB Expérience - Événements, Séjours & Expériences Exclusives",
-  description: "Découvrez nos événements éphémères, soirées privées, séjours Center Parcs et escapades d'exception.",
+  description: "Découvrez nos événements éphémères, soirées privées, voyages et escapades d'exception.",
 };
 
 export const viewport: Viewport = {
