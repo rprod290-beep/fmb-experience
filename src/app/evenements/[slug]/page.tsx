@@ -934,10 +934,26 @@ export default function EventDetailsPage({ params }: PageProps) {
                         {registering ? 'Enregistrement...' : 'Confirmer la réservation par Virement'}
                       </button>
                     ) : selectedTier.price > 0 ? (
-                      <div className="pt-2">
-                        <p className="text-[10px] text-zinc-400 text-center mb-2 font-medium">
-                          🔒 Paiement 100% sécurisé (Carte bancaire, Apple Pay ou Compte PayPal)
+                      <div className="pt-2 space-y-3">
+                        {/* Visual Badges for Payment Methods */}
+                        <div className="flex items-center justify-center gap-2 py-2 px-3 bg-white/5 rounded-xl border border-white/10 text-center">
+                          <span className="text-[11px] font-black text-white flex items-center gap-1">
+                             Apple Pay
+                          </span>
+                          <span className="text-white/20">•</span>
+                          <span className="text-[11px] font-black text-white flex items-center gap-1">
+                            💳 Carte Bancaire
+                          </span>
+                          <span className="text-white/20">•</span>
+                          <span className="text-[11px] font-black text-purple-400 flex items-center gap-1">
+                            PayPal
+                          </span>
+                        </div>
+
+                        <p className="text-[10px] text-zinc-400 text-center font-medium leading-relaxed">
+                          💡 Cliquez sur <b className="text-white">Carte bancaire</b> ci-dessous pour régler directement par <b className="text-white">Apple Pay</b> ou <b className="text-white">Carte Bleue</b> (sans besoin de compte PayPal).
                         </p>
+
                         <PayPalButtons
                           style={{ layout: "vertical", shape: "rect", label: "pay" }}
                           createOrder={(data, actions) => {
