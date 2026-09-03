@@ -168,7 +168,11 @@ export default function Home() {
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-pink-500/10 text-pink-400 border border-pink-500/20 uppercase tracking-widest">
                       🔥 Prochain Événement
                     </span>
-                    {featuredEvent.category === 'trip' ? (
+                    {featuredEvent.status === 'sold_out' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-red-500/20 text-red-400 border border-red-500/30 uppercase tracking-widest animate-pulse">
+                        🔴 ÉPUISÉ
+                      </span>
+                    ) : featuredEvent.category === 'trip' ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-widest">
                         ✈️ Voyage
                       </span>

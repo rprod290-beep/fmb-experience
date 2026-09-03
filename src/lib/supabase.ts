@@ -16,7 +16,7 @@ export interface Event {
   contact_email: string;
   instagram_url: string | null;
   whatsapp_number: string;
-  status: 'draft' | 'upcoming' | 'past';
+  status: 'draft' | 'upcoming' | 'sold_out' | 'past';
   payment_mode?: 'paypal' | 'wire_transfer' | 'both';
   created_at: string;
 }

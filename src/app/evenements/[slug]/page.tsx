@@ -106,12 +106,11 @@ export default function EventDetailsPage({ params }: PageProps) {
           setDjs(djsData || []);
         }
 
-        // 3. Récupérer les tarifs actifs
+        // 3. Récupérer tous les tarifs (actifs ou inactifs pour afficher le statut Épuisé)
         const { data: tiersData, error: tiersError } = await supabase
           .from('ticket_tiers')
           .select('*')
           .eq('event_id', eventData.id)
-          .eq('is_active', true)
           .order('display_order', { ascending: true });
 
         if (tiersError) {
@@ -151,12 +150,23 @@ export default function EventDetailsPage({ params }: PageProps) {
   };
 
   const getRemainingTicketsForTier = (tier: TicketTier) => {
+    if (!tier.is_active) return 0;
     const sold = getSoldUnitsForTier(tier.id, tier.label);
     if (tier.stock_quantity !== null && tier.stock_quantity !== undefined) {
       return Math.max(0, tier.stock_quantity - sold);
     }
     const capacity = tier.max_capacity ?? 100;
     return Math.max(0, capacity - sold);
+  };
+
+  const isTierSoldOut = (tier: TicketTier) => {
+    return !tier.is_active || getRemainingTicketsForTier(tier) <= 0;
+  };
+
+  const isEventSoldOut = () => {
+    if (event?.status === 'sold_out') return true;
+    if (ticketTiers.length === 0) return false;
+    return ticketTiers.every(t => isTierSoldOut(t));
   };
 
   const handleRegisterFreeTicket = async () => {
@@ -525,17 +535,19 @@ export default function EventDetailsPage({ params }: PageProps) {
               <div className="grid grid-cols-1 gap-4">
                 {ticketTiers.map((tier) => {
                   const remaining = getRemainingTicketsForTier(tier);
-                  const isSoldOut = remaining <= 0;
+                  const isSoldOut = isTierSoldOut(tier);
 
                   return (
                     <div
                       key={tier.id}
                       onClick={() => !isSoldOut && setSelectedTier(tier)}
-                      className={`p-5 rounded-2xl border transition-all duration-300 flex flex-col justify-between gap-4 group cursor-pointer ${
-                        selectedTier?.id === tier.id 
-                          ? 'border-emerald-500 bg-emerald-500/5 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
-                          : 'border-white/5 bg-white/[0.01] hover:border-white/20'
-                      } ${isSoldOut ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      className={`p-5 rounded-2xl border transition-all duration-300 flex flex-col justify-between gap-4 group ${
+                        isSoldOut 
+                          ? 'border-red-500/20 bg-red-500/5 opacity-60 cursor-not-allowed' 
+                          : selectedTier?.id === tier.id 
+                            ? 'border-emerald-500 bg-emerald-500/5 shadow-[0_0_15px_rgba(16,185,129,0.1)] cursor-pointer' 
+                            : 'border-white/5 bg-white/[0.01] hover:border-white/20 cursor-pointer'
+                      }`}
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -563,8 +575,8 @@ export default function EventDetailsPage({ params }: PageProps) {
 
                       <div className="flex justify-between items-center border-t border-white/5 pt-3">
                         {isSoldOut ? (
-                          <span className="text-[10px] text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20 font-extrabold uppercase tracking-wider">
-                            🔴 Complet
+                          <span className="text-[10px] text-red-400 bg-red-500/15 px-2.5 py-1 rounded-full border border-red-500/30 font-black uppercase tracking-wider flex items-center gap-1">
+                            🔴 ÉPUISÉ
                           </span>
                         ) : remaining <= 3 ? (
                           <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider animate-pulse">
@@ -577,9 +589,11 @@ export default function EventDetailsPage({ params }: PageProps) {
                         )}
 
                         <span className={`text-[10px] font-bold uppercase tracking-wider ${
-                          selectedTier?.id === tier.id ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-white'
+                          isSoldOut 
+                            ? 'text-red-400 font-extrabold' 
+                            : selectedTier?.id === tier.id ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-white'
                         }`}>
-                          {selectedTier?.id === tier.id ? 'Sélectionné ✓' : 'Choisir ce cottage →'}
+                          {isSoldOut ? 'Complet' : selectedTier?.id === tier.id ? 'Sélectionné ✓' : 'Choisir ce cottage →'}
                         </span>
                       </div>
                     </div>
@@ -590,13 +604,13 @@ export default function EventDetailsPage({ params }: PageProps) {
               <div className="space-y-4">
                 {ticketTiers.map((tier) => {
                   const remaining = getRemainingTicketsForTier(tier);
-                  const isSoldOut = remaining <= 0;
+                  const isSoldOut = isTierSoldOut(tier);
 
                   return (
                     <div
                       key={tier.id}
                       className={`p-4 rounded-2xl border border-white/5 bg-white/[0.01] flex flex-col justify-between gap-4 group transition-all duration-300 ${
-                        isSoldOut ? 'opacity-60 hover:opacity-85' : ''
+                        isSoldOut ? 'opacity-60 bg-red-500/[0.02] border-red-500/20' : ''
                       }`}
                     >
                       <div>
@@ -611,8 +625,8 @@ export default function EventDetailsPage({ params }: PageProps) {
 
                         <div className="mt-1.5 flex items-center flex-wrap gap-2 text-[9px] font-black uppercase tracking-widest">
                           {isSoldOut ? (
-                            <span className="text-red-500 bg-red-500/10 px-2 py-0.5 rounded border border-red-500/20">
-                              🔴 Complet
+                            <span className="text-red-400 bg-red-500/15 px-2.5 py-0.5 rounded-full border border-red-500/30">
+                              🔴 ÉPUISÉ
                             </span>
                           ) : remaining <= 5 ? (
                             <span className="text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20 animate-pulse">

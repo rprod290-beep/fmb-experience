@@ -647,6 +647,7 @@ export default function EditEventPage({ params }: PageProps) {
                 >
                   <option value="draft">Brouillon (Non visible sur le site public)</option>
                   <option value="upcoming">À venir (Visible à la une ou en liste)</option>
+                  <option value="sold_out">🔴 Épuisé (Complet - Réservations bloquées)</option>
                   <option value="past">Passé (Visible dans la catégorie "Passés")</option>
                 </select>
               </div>
@@ -1047,7 +1048,7 @@ export default function EditEventPage({ params }: PageProps) {
                             : 'bg-zinc-800 text-zinc-500 border-zinc-750 hover:bg-zinc-700'
                         }`}
                       >
-                        {tier.is_active ? 'Actif' : 'Inactif'}
+                        {tier.is_active ? '🟢 En vente' : '🔴 Épuisé'}
                       </button>
                       <button
                         type="button"
