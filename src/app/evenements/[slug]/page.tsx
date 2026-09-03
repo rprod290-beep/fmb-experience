@@ -1089,7 +1089,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                               purchase_units: [{
                                 amount: {
                                   currency_code: "EUR",
-                                  value: (ticketCount * selectedTier.price).toString()
+                                  value: (ticketCount * selectedTier.price).toFixed(2)
                                 },
                                 description: `Billet ${selectedTier.label} - ${ticketCount} place(s) pour FMB Experience`
                               }]
