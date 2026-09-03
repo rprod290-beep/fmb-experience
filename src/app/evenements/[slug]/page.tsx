@@ -314,7 +314,7 @@ export default function EventDetailsPage({ params }: PageProps) {
   }
 
   return (
-    <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "EUR" }}>
+    <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "EUR", enableFunding: "applepay" }}>
       <div className="min-h-screen flex flex-col bg-[#050508] text-white pb-20 relative overflow-hidden">
         {/* Dynamic Background Aurora Glow */}
         <div className="fixed inset-0 -z-30 overflow-hidden pointer-events-none">
