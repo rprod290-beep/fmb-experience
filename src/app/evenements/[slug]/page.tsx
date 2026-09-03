@@ -906,7 +906,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                               : 'text-zinc-400 hover:text-white'
                           }`}
                         >
-                          💳 Carte / PayPal
+                          💳 Carte / Apple Pay / PayPal
                         </button>
                         <button
                           type="button"
@@ -935,6 +935,9 @@ export default function EventDetailsPage({ params }: PageProps) {
                       </button>
                     ) : selectedTier.price > 0 ? (
                       <div className="pt-2">
+                        <p className="text-[10px] text-zinc-400 text-center mb-2 font-medium">
+                          🔒 Paiement 100% sécurisé (Carte bancaire, Apple Pay ou Compte PayPal)
+                        </p>
                         <PayPalButtons
                           style={{ layout: "vertical", shape: "rect", label: "pay" }}
                           createOrder={(data, actions) => {
