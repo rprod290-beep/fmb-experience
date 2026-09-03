@@ -934,7 +934,77 @@ export default function EventDetailsPage({ params }: PageProps) {
                         {registering ? 'Enregistrement...' : 'Confirmer la réservation par Virement'}
                       </button>
                     ) : selectedTier.price > 0 ? (
-                      <div className="pt-2">
+                      <div className="pt-2 space-y-2">
+                        {/* Dedicated Apple Pay Button via PayPal SDK */}
+                        <PayPalButtons
+                          fundingSource="applepay"
+                          style={{ layout: "vertical", shape: "rect" }}
+                          createOrder={(data, actions) => {
+                            return actions.order.create({
+                              purchase_units: [{
+                                amount: {
+                                  currency_code: "EUR",
+                                  value: (ticketCount * selectedTier.price).toString()
+                                },
+                                description: `Billet ${selectedTier.label} - ${ticketCount} place(s) pour FMB Experience`
+                              }]
+                            });
+                          }}
+                          onClick={(data, actions) => {
+                            if (!buyerName.trim()) {
+                              setRegistrationError("Veuillez saisir votre nom complet avant de procéder au paiement.");
+                              return actions.reject();
+                            }
+                            if (event?.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1) {
+                              if (participants.some(p => !p.trim())) {
+                                setRegistrationError("Veuillez renseigner le nom de tous les participants.");
+                                return actions.reject();
+                              }
+                            }
+                            setRegistrationError('');
+                            return actions.resolve();
+                          }}
+                          onApprove={async (data, actions) => {
+                            if (!actions.order) return;
+                            setRegistering(true);
+                            try {
+                              const details = await actions.order.capture();
+                              const partsToSend = event!.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1 
+                                ? participants.map(p => p.trim()) 
+                                : null;
+
+                              const result = await registerBuyer(
+                                event!.id, 
+                                buyerName.trim(), 
+                                selectedTier.label, 
+                                ticketCount, 
+                                'verified',
+                                selectedTier.id,
+                                partsToSend
+                              );
+                              if (result.success && result.confirmationCode) {
+                                const savedLabel = selectedTier.label;
+                                setSelectedTier(null);
+                                setBuyerName('');
+                                setTicketCount(1);
+                                setParticipants([]);
+                                router.push(`/evenements/${event!.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(savedLabel)}&quantity=${ticketCount}`);
+                              } else {
+                                setRegistrationError(result.error || "Paiement réussi mais échec de l'enregistrement. Contactez le support.");
+                              }
+                            } catch (err) {
+                              console.error(err);
+                              setRegistrationError("Une erreur s'est produite lors de la validation du paiement.");
+                            } finally {
+                              setRegistering(false);
+                            }
+                          }}
+                          onError={(err) => {
+                            console.error("Apple Pay Error:", err);
+                          }}
+                        />
+
+                        {/* Standard PayPal & Cards Buttons */}
                         <PayPalButtons
                           style={{ layout: "vertical", shape: "rect", label: "pay" }}
                           createOrder={(data, actions) => {
