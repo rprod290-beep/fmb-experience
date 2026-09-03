@@ -324,6 +324,20 @@ export default function EventDetailsPage({ params }: PageProps) {
 
       session.onvalidatemerchant = async (evt: any) => {
         try {
+          if (typeof window !== 'undefined' && (window as any).paypal && (window as any).paypal.Applepay) {
+            const applepay = (window as any).paypal.Applepay();
+            const validateResult = await applepay.validateMerchant({
+              validationUrl: evt.validationUrl,
+              clientAuthorization: paypalClientId
+            });
+            session.completeMerchantValidation(validateResult.merchantSession);
+            return;
+          }
+        } catch (paypalErr) {
+          console.error("PayPal Apple Pay validateMerchant error:", paypalErr);
+        }
+
+        try {
           const res = await fetch('/api/applepay-validate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -440,7 +454,7 @@ export default function EventDetailsPage({ params }: PageProps) {
   }
 
   return (
-    <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "EUR", enableFunding: "applepay,card", components: "buttons,funding-eligibility" }}>
+    <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "EUR", enableFunding: "applepay,card", components: "buttons,applepay,funding-eligibility" }}>
       <div className="min-h-screen flex flex-col bg-[#050508] text-white pb-20 relative overflow-hidden">
         {/* Dynamic Background Aurora Glow */}
         <div className="fixed inset-0 -z-30 overflow-hidden pointer-events-none">
