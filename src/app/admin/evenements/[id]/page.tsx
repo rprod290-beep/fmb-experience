@@ -4,7 +4,7 @@ import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase, Event, DJ, TicketTier, Buyer } from '@/lib/supabase';
-import { checkAndDisableTierIfOutOfStock } from '@/app/actions';
+import { checkAndDisableTierIfOutOfStock, adminAddBuyer } from '@/app/actions';
 import { 
   ArrowLeft, 
   Save, 
@@ -21,7 +21,11 @@ import {
   UserCheck, 
   AlertTriangle,
   FileText,
-  Sparkles
+  Sparkles,
+  UserPlus,
+  Copy,
+  ExternalLink,
+  X
 } from 'lucide-react';
 
 interface PageProps {
@@ -60,6 +64,27 @@ export default function EditEventPage({ params }: PageProps) {
     stock_quantity: ''
   });
   const [editingTierId, setEditingTierId] = useState<string | null>(null);
+
+  // Manual Buyer Addition States
+  const [showAddBuyer, setShowAddBuyer] = useState(false);
+  const [addingBuyer, setAddingBuyer] = useState(false);
+  const [copiedBuyerId, setCopiedBuyerId] = useState<string | null>(null);
+  const [newBuyerSuccess, setNewBuyerSuccess] = useState<{
+    code: string;
+    name: string;
+    tier: string;
+    count: number;
+  } | null>(null);
+  const [buyerAddForm, setBuyerAddForm] = useState({
+    name_or_pseudo: '',
+    ticket_tier_id: '',
+    ticket_tier_label: '',
+    ticket_count: 1,
+    status: 'verified' as Buyer['status'],
+    notes: '',
+    additional_participants: [] as string[],
+    custom_code: ''
+  });
 
   useEffect(() => {
     async function checkAuthAndLoad() {
@@ -515,6 +540,102 @@ export default function EditEventPage({ params }: PageProps) {
       alert(error.message);
     } else {
       setBuyers(prev => prev.filter(b => b.id !== buyerId));
+    }
+  };
+
+  const getTicketUrl = (b: Buyer | { confirmation_code: string; ticket_tier_label?: string | null; ticket_count?: number }) => {
+    if (typeof window === 'undefined') return '';
+    const origin = window.location.origin;
+    const tier = b.ticket_tier_label || '';
+    const count = b.ticket_count || 1;
+    return `${origin}/evenements/${event.slug}/merci?code=${b.confirmation_code}&tier=${encodeURIComponent(tier)}&quantity=${count}`;
+  };
+
+  const handleCopyTicketLink = (b: Buyer) => {
+    const url = getTicketUrl(b);
+    if (url) {
+      navigator.clipboard.writeText(url);
+      setCopiedBuyerId(b.id);
+      setTimeout(() => setCopiedBuyerId(null), 2500);
+    }
+  };
+
+  const handleAddManualBuyer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!buyerAddForm.name_or_pseudo.trim()) {
+      alert("Veuillez saisir un nom ou pseudo.");
+      return;
+    }
+
+    setAddingBuyer(true);
+    try {
+      const selectedTier = ticketTiers.find(t => t.id === buyerAddForm.ticket_tier_id);
+      let tierLabel = 'Paiement direct';
+      if (selectedTier) {
+        tierLabel = selectedTier.label;
+      } else if (buyerAddForm.ticket_tier_label.trim()) {
+        tierLabel = buyerAddForm.ticket_tier_label.trim();
+      }
+
+      const filteredParticipants = buyerAddForm.additional_participants
+        .map(p => p.trim())
+        .filter(Boolean);
+
+      const res = await adminAddBuyer({
+        eventId: id,
+        nameOrPseudo: buyerAddForm.name_or_pseudo,
+        ticketTierLabel: tierLabel,
+        ticketTierId: buyerAddForm.ticket_tier_id && buyerAddForm.ticket_tier_id !== '__custom__' ? buyerAddForm.ticket_tier_id : null,
+        ticketCount: Number(buyerAddForm.ticket_count) || 1,
+        status: buyerAddForm.status,
+        notes: buyerAddForm.notes.trim() || null,
+        additionalParticipants: filteredParticipants.length > 0 ? filteredParticipants : null,
+        customCode: buyerAddForm.custom_code.trim() || null
+      });
+
+      if (!res.success || !res.buyer) {
+        alert(res.error || "Erreur lors de l'ajout du participant.");
+        return;
+      }
+
+      // Ajouter en tête de liste
+      setBuyers(prev => [res.buyer, ...prev]);
+
+      // Si le statut est validé et qu'un ticket_tier_id était sélectionné, recharger les tarifs
+      if (buyerAddForm.status === 'verified' && buyerAddForm.ticket_tier_id && buyerAddForm.ticket_tier_id !== '__custom__') {
+        const { data: tiersData } = await supabase
+          .from('ticket_tiers')
+          .select('*')
+          .eq('event_id', id)
+          .order('display_order', { ascending: true });
+        if (tiersData) setTicketTiers(tiersData);
+      }
+
+      // Afficher message de succès avec lien
+      setNewBuyerSuccess({
+        code: res.buyer.confirmation_code,
+        name: res.buyer.name_or_pseudo || 'Invité',
+        tier: res.buyer.ticket_tier_label || tierLabel,
+        count: res.buyer.ticket_count || 1
+      });
+
+      // Réinitialiser le formulaire
+      setBuyerAddForm({
+        name_or_pseudo: '',
+        ticket_tier_id: '',
+        ticket_tier_label: '',
+        ticket_count: 1,
+        status: 'verified',
+        notes: '',
+        additional_participants: [],
+        custom_code: ''
+      });
+      setShowAddBuyer(false);
+    } catch (err: any) {
+      console.error(err);
+      alert("Une erreur est survenue : " + (err?.message || err));
+    } finally {
+      setAddingBuyer(false);
     }
   };
 
@@ -1075,9 +1196,297 @@ export default function EditEventPage({ params }: PageProps) {
 
         {/* 4. BUYERS TABLE (VERIFICATION) */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-6">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-800 pb-3 flex items-center gap-2">
-            <Users className="w-4 h-4 text-purple-400" /> 4. Liste des Acheteurs & Réservations
-          </h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-zinc-800 gap-4">
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <Users className="w-4 h-4 text-purple-400" /> 4. Liste des Acheteurs & Réservations
+              </h3>
+              <p className="text-[11px] text-zinc-400 mt-1">
+                Gérez les places, validez les paiements et ajoutez les personnes ayant payé en direct (espèces, Lydia, virement...).
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowAddBuyer(!showAddBuyer)}
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 whitespace-nowrap self-start sm:self-auto cursor-pointer"
+            >
+              <UserPlus className="w-4 h-4" />
+              {showAddBuyer ? 'Masquer le formulaire' : '+ Ajouter un participant'}
+            </button>
+          </div>
+
+          {/* Stats Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-zinc-950/70 border border-zinc-800/80 rounded-2xl p-3">
+              <span className="text-[10px] text-zinc-500 font-bold uppercase block">Total Réservations</span>
+              <span className="text-lg font-black text-white">{buyers.length}</span>
+            </div>
+            <div className="bg-zinc-950/70 border border-zinc-800/80 rounded-2xl p-3">
+              <span className="text-[10px] text-emerald-400/80 font-bold uppercase block">Places Validées</span>
+              <span className="text-lg font-black text-emerald-400">
+                {buyers.filter(b => b.status === 'verified').reduce((sum, b) => sum + (b.ticket_count || 1), 0)}
+              </span>
+            </div>
+            <div className="bg-zinc-950/70 border border-zinc-800/80 rounded-2xl p-3">
+              <span className="text-[10px] text-amber-400/80 font-bold uppercase block">Places en Attente</span>
+              <span className="text-lg font-black text-amber-400">
+                {buyers.filter(b => b.status === 'pending').reduce((sum, b) => sum + (b.ticket_count || 1), 0)}
+              </span>
+            </div>
+            <div className="bg-zinc-950/70 border border-zinc-800/80 rounded-2xl p-3">
+              <span className="text-[10px] text-purple-400/80 font-bold uppercase block">Scannés / Entrés</span>
+              <span className="text-lg font-black text-purple-400">
+                {buyers.reduce((sum, b) => sum + (b.checked_in_count || 0), 0)}
+              </span>
+            </div>
+          </div>
+
+          {/* Success Banner after adding buyer */}
+          {newBuyerSuccess && (
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs animate-fade-in">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                  ✓
+                </div>
+                <div>
+                  <p className="font-bold text-white">
+                    <span className="text-emerald-400">{newBuyerSuccess.name}</span> a été ajouté(e) avec succès ({newBuyerSuccess.count} place{newBuyerSuccess.count > 1 ? 's' : ''} - {newBuyerSuccess.tier}) !
+                  </p>
+                  <p className="text-zinc-400 text-[11px] mt-0.5">
+                    Code Unique : <span className="font-mono font-bold text-purple-400 select-all">{newBuyerSuccess.code}</span>
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                    const url = `${origin}/evenements/${event.slug}/merci?code=${newBuyerSuccess.code}&tier=${encodeURIComponent(newBuyerSuccess.tier)}&quantity=${newBuyerSuccess.count}`;
+                    navigator.clipboard.writeText(url);
+                    setCopiedBuyerId('NEW_' + newBuyerSuccess.code);
+                    setTimeout(() => setCopiedBuyerId(null), 2500);
+                  }}
+                  className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold rounded-xl transition-colors flex items-center gap-1.5 shadow-md text-xs cursor-pointer"
+                >
+                  {copiedBuyerId === 'NEW_' + newBuyerSuccess.code ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" /> Lien copié !
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" /> Copier le lien du billet
+                    </>
+                  )}
+                </button>
+                <a
+                  href={`/evenements/${event.slug}/merci?code=${newBuyerSuccess.code}&tier=${encodeURIComponent(newBuyerSuccess.tier)}&quantity=${newBuyerSuccess.count}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors"
+                  title="Ouvrir le billet"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setNewBuyerSuccess(null)}
+                  className="p-2 text-zinc-500 hover:text-white rounded-xl transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Add Manual Buyer Form */}
+          {showAddBuyer && (
+            <form onSubmit={handleAddManualBuyer} className="p-5 bg-zinc-950 border border-purple-500/30 rounded-2xl space-y-4 text-xs animate-fade-in shadow-xl">
+              <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3">
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider flex items-center gap-2">
+                  <UserPlus className="w-4 h-4 text-pink-400" /> Ajouter une personne manuellement
+                </h4>
+                <span className="text-[10px] text-zinc-400">Paiement direct (espèces, Lydia, virement à un orga...)</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Nom ou Pseudo */}
+                <div>
+                  <label className="block font-semibold mb-1 text-zinc-300">
+                    Nom / Prénom ou Pseudo <span className="text-pink-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: Lucas Martin"
+                    value={buyerAddForm.name_or_pseudo}
+                    onChange={(e) => setBuyerAddForm({ ...buyerAddForm, name_or_pseudo: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                {/* Tarif */}
+                <div>
+                  <label className="block font-semibold mb-1 text-zinc-300">
+                    Tarif / Catégorie de billet
+                  </label>
+                  <select
+                    value={buyerAddForm.ticket_tier_id}
+                    onChange={(e) => {
+                      const tier = ticketTiers.find(t => t.id === e.target.value);
+                      setBuyerAddForm({
+                        ...buyerAddForm,
+                        ticket_tier_id: e.target.value,
+                        ticket_tier_label: tier ? tier.label : ''
+                      });
+                    }}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500 cursor-pointer"
+                  >
+                    <option value="">— Sélectionner un tarif —</option>
+                    {ticketTiers.map((tier) => (
+                      <option key={tier.id} value={tier.id}>
+                        {tier.label} ({tier.price.toFixed(2)} €)
+                      </option>
+                    ))}
+                    <option value="__custom__">Autre / Nom personnalisé</option>
+                  </select>
+                  {buyerAddForm.ticket_tier_id === '__custom__' && (
+                    <input
+                      type="text"
+                      placeholder="Ex: Invité orga, Pack VIP..."
+                      value={buyerAddForm.ticket_tier_label}
+                      onChange={(e) => setBuyerAddForm({ ...buyerAddForm, ticket_tier_label: e.target.value })}
+                      className="w-full mt-2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-1.5 text-white text-xs focus:outline-none focus:border-purple-500"
+                    />
+                  )}
+                </div>
+
+                {/* Nombre de places */}
+                <div>
+                  <label className="block font-semibold mb-1 text-zinc-300">
+                    Nombre de places
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={buyerAddForm.ticket_count}
+                    onChange={(e) => {
+                      const count = Math.max(1, parseInt(e.target.value) || 1);
+                      setBuyerAddForm(prev => {
+                        const currentParts = [...prev.additional_participants];
+                        if (count > 1) {
+                          while (currentParts.length < count - 1) currentParts.push('');
+                          currentParts.splice(count - 1);
+                        } else {
+                          currentParts.length = 0;
+                        }
+                        return {
+                          ...prev,
+                          ticket_count: count,
+                          additional_participants: currentParts
+                        };
+                      });
+                    }}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+              </div>
+
+              {/* Accompagnants si places > 1 */}
+              {buyerAddForm.ticket_count > 1 && (
+                <div className="p-3 bg-zinc-900/60 border border-zinc-800/80 rounded-xl space-y-2">
+                  <label className="block text-[11px] font-bold text-purple-300 uppercase tracking-wider">
+                    Noms des {buyerAddForm.ticket_count - 1} accompagnant(s) (facultatif)
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                    {Array.from({ length: buyerAddForm.ticket_count - 1 }).map((_, idx) => (
+                      <input
+                        key={idx}
+                        type="text"
+                        placeholder={`Participant #${idx + 2} (Nom / Prénom)`}
+                        value={buyerAddForm.additional_participants[idx] || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setBuyerAddForm(prev => {
+                            const parts = [...prev.additional_participants];
+                            parts[idx] = val;
+                            return { ...prev, additional_participants: parts };
+                          });
+                        }}
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-white text-xs focus:outline-none focus:border-purple-500"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Statut */}
+                <div>
+                  <label className="block font-semibold mb-1 text-zinc-300">
+                    Statut de la réservation
+                  </label>
+                  <select
+                    value={buyerAddForm.status}
+                    onChange={(e: any) => setBuyerAddForm({ ...buyerAddForm, status: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500 cursor-pointer font-semibold"
+                  >
+                    <option value="verified" className="text-emerald-400">✅ Payé / Validé (reçu en direct)</option>
+                    <option value="pending" className="text-amber-400">⏳ En attente de paiement</option>
+                    <option value="added_close_friends" className="text-pink-400">⭐️ Amis Proches / Invité VIP</option>
+                  </select>
+                </div>
+
+                {/* Notes internes */}
+                <div>
+                  <label className="block font-semibold mb-1 text-zinc-300">
+                    Notes internes / Mode de règlement
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Payé 20€ espèces à Alex, Lydia, etc."
+                    value={buyerAddForm.notes}
+                    onChange={(e) => setBuyerAddForm({ ...buyerAddForm, notes: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+
+                {/* Code Unique personnalisé (optionnel) */}
+                <div>
+                  <label className="block font-semibold mb-1 text-zinc-300">
+                    Code Unique (laisser vide = automatique)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Auto (ou taper 8 lettres/chiffres)"
+                    value={buyerAddForm.custom_code}
+                    onChange={(e) => setBuyerAddForm({ ...buyerAddForm, custom_code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-purple-300 font-mono focus:outline-none focus:border-purple-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddBuyer(false)}
+                  className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-bold rounded-xl transition-colors text-xs cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingBuyer}
+                  className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl transition-all shadow-md active:scale-95 text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  {addingBuyer ? 'Ajout en cours...' : 'Ajouter à la liste'}
+                </button>
+              </div>
+            </form>
+          )}
 
           {buyers.length === 0 ? (
             <p className="text-zinc-500 text-center py-10 text-xs font-medium border border-dashed border-zinc-800 rounded-2xl">
@@ -1102,8 +1511,36 @@ export default function EditEventPage({ params }: PageProps) {
                     {buyers.map((buyer) => (
                       <tr key={buyer.id} className="hover:bg-zinc-900/40 transition-colors">
                         {/* Code */}
-                        <td className="px-6 py-4 font-mono font-bold tracking-widest text-purple-400 text-sm select-all">
-                          {buyer.confirmation_code}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold tracking-widest text-purple-400 text-sm select-all">
+                              {buyer.confirmation_code}
+                            </span>
+                            <button
+                              type="button"
+                              title="Copier le lien direct du billet (avec QR code)"
+                              onClick={() => handleCopyTicketLink(buyer)}
+                              className="p-1 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded transition-colors cursor-pointer"
+                            >
+                              {copiedBuyerId === buyer.id ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                            <a
+                              href={getTicketUrl(buyer)}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="Ouvrir le billet / QR code"
+                              className="p-1 text-zinc-500 hover:text-purple-400 hover:bg-zinc-800 rounded transition-colors"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
+                          {copiedBuyerId === buyer.id && (
+                            <span className="text-[9px] text-emerald-400 font-bold block mt-0.5 animate-fade-in">Lien copié !</span>
+                          )}
                         </td>
                         {/* Name */}
                         <td className="px-6 py-4">
@@ -1113,6 +1550,9 @@ export default function EditEventPage({ params }: PageProps) {
                             onChange={(e) => handleUpdateBuyerName(buyer.id, e.target.value)}
                             className="bg-transparent border-b border-transparent hover:border-zinc-800 focus:border-purple-500 focus:outline-none py-1 text-white font-semibold w-full text-xs"
                           />
+                          {buyer.email && (
+                            <span className="text-[10px] text-zinc-400 block mt-0.5">📧 {buyer.email}</span>
+                          )}
                           {buyer.additional_participants && buyer.additional_participants.length > 0 && (
                             <div className="mt-1.5 flex flex-wrap gap-1">
                               <span className="text-[9px] font-bold text-zinc-400 block w-full">Participants :</span>
@@ -1176,7 +1616,7 @@ export default function EditEventPage({ params }: PageProps) {
                             <button
                               type="button"
                               onClick={() => handleUpdateBuyerStatus(buyer.id, 'verified')}
-                              className="mt-1.5 px-2 py-1 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-lg text-[9px] font-bold uppercase transition-colors flex items-center gap-1 w-full justify-center"
+                              className="mt-1.5 px-2 py-1 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-lg text-[9px] font-bold uppercase transition-colors flex items-center gap-1 w-full justify-center cursor-pointer"
                             >
                               🟢 Valider le virement
                             </button>
@@ -1196,7 +1636,8 @@ export default function EditEventPage({ params }: PageProps) {
                         <td className="px-6 py-4 text-right">
                           <button
                             onClick={() => handleDeleteBuyer(buyer.id)}
-                            className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                            className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                            title="Supprimer"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>

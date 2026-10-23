@@ -145,3 +145,79 @@ export async function checkAndDisableTierIfOutOfStock(ticketTierId: string): Pro
     console.error('Erreur lors de la vérification de stock:', err);
   }
 }
+
+/**
+ * Permet à un administrateur d'ajouter manuellement un participant/acheteur dans la liste.
+ */
+export async function adminAddBuyer(params: {
+  eventId: string;
+  nameOrPseudo: string;
+  ticketTierLabel: string;
+  ticketTierId?: string | null;
+  ticketCount?: number;
+  status?: 'pending' | 'verified' | 'added_close_friends';
+  notes?: string | null;
+  additionalParticipants?: string[] | null;
+  customCode?: string | null;
+}): Promise<{ success: boolean; buyer?: any; error?: string }> {
+  try {
+    const {
+      eventId,
+      nameOrPseudo,
+      ticketTierLabel,
+      ticketTierId,
+      ticketCount = 1,
+      status = 'verified',
+      notes,
+      additionalParticipants,
+      customCode
+    } = params;
+
+    if (!eventId || !nameOrPseudo?.trim()) {
+      return { success: false, error: 'Le nom du participant est obligatoire.' };
+    }
+
+    const insertData: any = {
+      event_id: eventId,
+      name_or_pseudo: nameOrPseudo.trim(),
+      ticket_tier_label: ticketTierLabel || 'Paiement direct',
+      status: status,
+      ticket_count: ticketCount > 0 ? ticketCount : 1,
+    };
+
+    if (ticketTierId) {
+      insertData.ticket_tier_id = ticketTierId;
+    }
+    if (notes && notes.trim()) {
+      insertData.notes = notes.trim();
+    }
+    if (additionalParticipants && additionalParticipants.length > 0) {
+      insertData.additional_participants = additionalParticipants;
+    }
+    if (customCode && customCode.trim()) {
+      insertData.confirmation_code = customCode.trim().toUpperCase();
+    }
+
+    const { data, error } = await supabaseServer
+      .from('buyers')
+      .insert([insertData])
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('Erreur insertion buyer admin:', error);
+      return { success: false, error: "Impossible d'ajouter ce participant : " + error.message };
+    }
+
+    // Si statut validé et ticket_tier_id présent, vérifier le stock
+    if (status === 'verified' && ticketTierId) {
+      await checkAndDisableTierIfOutOfStock(ticketTierId);
+    }
+
+    return { success: true, buyer: data };
+  } catch (err: any) {
+    console.error('Erreur catch-all adminAddBuyer:', err);
+    return { success: false, error: err?.message || 'Une erreur serveur est survenue.' };
+  }
+}
+
