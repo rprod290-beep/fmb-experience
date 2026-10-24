@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { supabase, Event } from '@/lib/supabase';
+import { verifyConfirmationCodeAndGetAddress } from '@/app/actions';
 import { 
   Check, 
   ArrowLeft, 
@@ -26,7 +27,9 @@ export default function ThankYouPage({ params }: PageProps) {
   const { slug } = params;
   const searchParams = useSearchParams();
   
-  const code = searchParams.get('code') || '';
+  const queryCode = (searchParams.get('code') || '').trim();
+  const [activeCode, setActiveCode] = useState(queryCode);
+  const [manualCodeInput, setManualCodeInput] = useState('');
   const tier = searchParams.get('tier') || '';
   const payLink = searchParams.get('payLink') || '';
   const quantity = Number(searchParams.get('quantity') || '1');
@@ -34,6 +37,18 @@ export default function ThankYouPage({ params }: PageProps) {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [copiedAddress, setCopiedAddress] = useState(false);
+
+  // Secret Address states
+  const [secretAddress, setSecretAddress] = useState<string | null>(null);
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [addressError, setAddressError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (queryCode) {
+      setActiveCode(queryCode);
+    }
+  }, [queryCode]);
 
   useEffect(() => {
     async function fetchEvent() {
@@ -62,11 +77,56 @@ export default function ThankYouPage({ params }: PageProps) {
     }
   }, [slug]);
 
+  // Déblocage automatique de l'adresse secrète dès que l'événement et le code sont disponibles
+  useEffect(() => {
+    async function loadSecretAddress() {
+      if (!event || !activeCode) return;
+      
+      if (event.category === 'trip') {
+        setSecretAddress(event.address || null);
+        return;
+      }
+
+      try {
+        setAddressLoading(true);
+        setAddressError(null);
+        const res = await verifyConfirmationCodeAndGetAddress(event.id, activeCode);
+        if (res.success && res.address) {
+          setSecretAddress(res.address);
+        } else {
+          setAddressError(res.error || "Adresse non disponible ou réservation en cours de validation.");
+        }
+      } catch (err) {
+        console.error("Erreur lors de la récupération de l'adresse secrète:", err);
+        setAddressError("Impossible de charger l'adresse secrète.");
+      } finally {
+        setAddressLoading(false);
+      }
+    }
+
+    loadSecretAddress();
+  }, [event, activeCode]);
+
   const handleCopyCode = () => {
-    if (code) {
-      navigator.clipboard.writeText(code);
+    if (activeCode) {
+      navigator.clipboard.writeText(activeCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleCopyAddress = () => {
+    if (secretAddress) {
+      navigator.clipboard.writeText(secretAddress);
+      setCopiedAddress(true);
+      setTimeout(() => setCopiedAddress(false), 2500);
+    }
+  };
+
+  const handleManualCodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (manualCodeInput.trim()) {
+      setActiveCode(manualCodeInput.trim().toUpperCase());
     }
   };
 
@@ -79,13 +139,13 @@ export default function ThankYouPage({ params }: PageProps) {
     );
   }
 
-  if (!event || !code) {
+  if (!event) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-6 max-w-md mx-auto text-center px-4 bg-[#050508] text-white">
         <AlertTriangle className="w-12 h-12 text-pink-500 mx-auto" />
-        <h2 className="text-3xl font-extrabold text-white uppercase tracking-tight">Erreur de Réservation</h2>
+        <h2 className="text-3xl font-extrabold text-white uppercase tracking-tight">Événement Introuvable</h2>
         <p className="text-white/60 text-sm leading-relaxed">
-          Aucun code de réservation valide ou aucun événement trouvé dans cette session.
+          Cet événement n'existe pas ou n'est plus en ligne.
         </p>
         <Link href="/" className="glow-btn-primary flex items-center gap-2 text-xs">
           <ArrowLeft className="w-4 h-4" /> Retour à l'accueil
@@ -94,8 +154,66 @@ export default function ThankYouPage({ params }: PageProps) {
     );
   }
 
+  // Si aucun code n'est fourni dans l'URL ou saisi, on invite la personne à le renseigner plutôt que de la bloquer
+  if (!activeCode) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#050508] text-white">
+        <header className="border-b border-white/5 bg-black/40 backdrop-blur-md sticky top-0 z-40">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center">
+            <Link href={`/evenements/${event.slug}`} className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-xs font-bold uppercase tracking-wider">
+              <ArrowLeft className="w-4 h-4 text-pink-500" /> Retour à l'événement
+            </Link>
+          </div>
+        </header>
+
+        <main className="flex-grow flex items-center justify-center px-4 py-12">
+          <div className="max-w-md w-full glass p-8 rounded-3xl border border-white/10 text-center space-y-6 shadow-2xl animate-fade-in">
+            <div className="w-16 h-16 rounded-full bg-purple-500/10 border border-purple-500/30 flex items-center justify-center mx-auto text-purple-400">
+              <MapPin className="w-8 h-8 text-pink-400" />
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-black uppercase text-white tracking-tight">
+                Accéder à mon Billet & Lieu Secret
+              </h2>
+              <p className="text-xs text-white/60 mt-2 leading-relaxed">
+                Entrez votre <b>Code Unique</b> de réservation pour afficher votre QR code d'entrée et dévoiler l'adresse secrète de la soirée <b>{event.title}</b>.
+              </p>
+            </div>
+
+            <form onSubmit={handleManualCodeSubmit} className="space-y-4">
+              <div>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: 67F39168"
+                  value={manualCodeInput}
+                  onChange={(e) => setManualCodeInput(e.target.value.toUpperCase().trim())}
+                  className="w-full bg-black/60 border border-white/15 focus:border-purple-500 rounded-2xl px-4 py-3.5 text-center text-lg font-mono font-black tracking-widest text-white uppercase focus:outline-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full py-4 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:from-purple-500 hover:to-orange-400 text-white font-extrabold text-xs uppercase tracking-widest rounded-2xl shadow-lg transition-all active:scale-98 cursor-pointer"
+              >
+                Déverrouiller mon billet & l'adresse
+              </button>
+            </form>
+
+            <div className="pt-2">
+              <Link href={`/evenements/${event.slug}`} className="text-xs text-white/40 hover:text-white transition-colors">
+                ← Retour à la page de la soirée
+              </Link>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   // Encodage du message WhatsApp
-  const whatsappMessage = `Bonjour, je viens d'acheter mon billet pour ${event.title}, voici ma preuve d'achat 👇 (Code: ${code})`;
+  const whatsappMessage = `Bonjour, je viens d'acheter mon billet pour ${event.title}, voici ma preuve d'achat 👇 (Code: ${activeCode})`;
   const encodedWhatsappMessage = encodeURIComponent(whatsappMessage);
   const whatsappUrl = `https://wa.me/${event.whatsapp_number}?text=${encodedWhatsappMessage}`;
 
@@ -103,10 +221,13 @@ export default function ThankYouPage({ params }: PageProps) {
     <div className="min-h-screen flex flex-col bg-[#050508] text-white pb-20">
       {/* Header */}
       <header className="border-b border-white/5 bg-black/40 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center">
-          <Link href="/" className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-xs font-bold uppercase tracking-wider">
-            <ArrowLeft className="w-4 h-4 text-pink-500" /> Accueil
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          <Link href={`/evenements/${event.slug}`} className="flex items-center gap-2 text-white/50 hover:text-white transition-colors text-xs font-bold uppercase tracking-wider">
+            <ArrowLeft className="w-4 h-4 text-pink-500" /> Page de l'Événement
           </Link>
+          <span className="font-extrabold text-xs tracking-wider text-purple-400 uppercase">
+            Billet Numérique
+          </span>
         </div>
       </header>
 
@@ -124,10 +245,10 @@ export default function ThankYouPage({ params }: PageProps) {
               Réservation Enregistrée
             </span>
             <h2 className="text-3xl sm:text-4xl font-black uppercase text-white tracking-tight mt-4">
-              Merci pour votre commande !
+              Votre Billet d'Accès
             </h2>
             <p className="text-xs text-white/50 max-w-sm mx-auto mt-2 leading-relaxed">
-              Votre billet pour la catégorie <b>{tier}</b> ({quantity} {quantity === 1 ? 'place' : 'places'}) a été réservé. Suivez les étapes ci-dessous pour débloquer votre accès.
+              {event.title} • {tier ? `Catégorie ${tier}` : 'Entrée Validée'} ({quantity} {quantity === 1 ? 'place' : 'places'})
             </p>
           </div>
 
@@ -144,18 +265,98 @@ export default function ThankYouPage({ params }: PageProps) {
             </div>
           )}
 
-          {/* CODE COMPONENT */}
+          {/* 1. SECRET LOCATION CARD (LIEU SECRET DÉVOILÉ) */}
+          <div className="glass p-6 sm:p-7 rounded-3xl border border-purple-500/30 space-y-4 shadow-[0_0_40px_rgba(147,51,234,0.15)] relative overflow-hidden text-left">
+            <div className="flex items-center justify-between border-b border-white/5 pb-3">
+              <div className="flex items-center gap-2 text-pink-400 font-extrabold text-xs uppercase tracking-wider">
+                <MapPin className="w-4 h-4 text-pink-500" />
+                {event.category === 'trip' ? 'Destination & Lieu' : '📍 Lieu Secret de la Soirée'}
+              </div>
+              <span className="text-[10px] bg-purple-500/15 text-purple-300 border border-purple-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase">
+                {secretAddress ? 'Débloqué' : 'En attente'}
+              </span>
+            </div>
+
+            {addressLoading ? (
+              <div className="py-6 flex items-center justify-center gap-3 text-white/50 text-xs">
+                <div className="w-4 h-4 rounded-full border-2 border-purple-500/20 border-t-purple-500 animate-spin"></div>
+                <span>Déverrouillage de l'adresse avec votre code...</span>
+              </div>
+            ) : secretAddress ? (
+              <div className="space-y-4">
+                <div className="bg-white/[0.04] border border-white/10 rounded-2xl p-4 sm:p-5">
+                  <p className="text-[10px] text-zinc-400 uppercase font-bold tracking-wider mb-1">
+                    Adresse exacte :
+                  </p>
+                  <p className="text-white font-black text-lg sm:text-xl tracking-tight select-all">
+                    {secretAddress}
+                  </p>
+                </div>
+
+                {/* Boutons d'itinéraire Maps */}
+                <div className="flex flex-wrap gap-2.5 pt-1">
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(secretAddress)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 min-w-[130px] px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-md transition-all active:scale-95"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Google Maps
+                  </a>
+                  <a
+                    href={`https://maps.apple.com/?q=${encodeURIComponent(secretAddress)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 min-w-[130px] px-4 py-3 bg-white/10 hover:bg-white/15 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-white/10 transition-all active:scale-95"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    Apple Plans
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyAddress}
+                    className="px-4 py-3 bg-white/5 hover:bg-white/10 text-zinc-300 font-bold rounded-xl text-xs flex items-center justify-center gap-2 border border-white/10 transition-all active:scale-95 cursor-pointer"
+                  >
+                    {copiedAddress ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        Copiée !
+                      </>
+                    ) : (
+                      <>
+                        <Clipboard className="w-3.5 h-3.5" />
+                        Copier
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-xs text-amber-200/90 leading-relaxed space-y-1">
+                <p className="font-bold flex items-center gap-2 text-amber-300">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                  Adresse en attente de validation
+                </p>
+                <p className="text-[11px] text-amber-200/80">
+                  {addressError || "Votre paiement ou virement doit être validé par les organisateurs pour dévoiler l'adresse secrète. Dès validation, l'adresse s'affichera directement ici."}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* 2. CODE COMPONENT */}
           <div className="glass p-6 rounded-3xl border border-white/10 space-y-3 shadow-[0_0_30px_rgba(147,51,234,0.1)] relative group">
             <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest">
               Votre Code de Confirmation Unique
             </p>
             <div className="font-mono text-3xl sm:text-4xl font-black tracking-widest text-white uppercase select-all py-2 neon-text-purple">
-              {code}
+              {activeCode}
             </div>
             
             <button
               onClick={handleCopyCode}
-              className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white transition-colors mx-auto pt-2 border-t border-white/5 w-full justify-center"
+              className="flex items-center gap-1.5 text-xs text-white/50 hover:text-white transition-colors mx-auto pt-2 border-t border-white/5 w-full justify-center cursor-pointer"
             >
               {copied ? (
                 <>
@@ -171,7 +372,7 @@ export default function ThankYouPage({ params }: PageProps) {
             </button>
           </div>
 
-          {/* QR CODE CARD */}
+          {/* 3. QR CODE CARD */}
           <div className="glass p-6 rounded-3xl border border-white/10 space-y-4 shadow-[0_0_40px_rgba(219,39,119,0.05)]">
             <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">
               Votre QR Code d'Entrée
@@ -181,8 +382,8 @@ export default function ThankYouPage({ params }: PageProps) {
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
                   typeof window !== 'undefined' 
-                    ? window.location.origin + '/admin/scan?code=' + code 
-                    : 'https://fmb-experience.vercel.app/admin/scan?code=' + code
+                    ? window.location.origin + '/admin/scan?code=' + activeCode 
+                    : 'https://fmb-experience.vercel.app/admin/scan?code=' + activeCode
                 )}`}
                 alt="QR Code de confirmation"
                 className="w-[180px] h-[180px]"
@@ -190,35 +391,17 @@ export default function ThankYouPage({ params }: PageProps) {
             </div>
             
             <p className="text-[10px] text-white/40 max-w-xs mx-auto leading-relaxed">
-              Présentez ce QR Code le jour J. L'équipe d'organisation le scannera avec un smartphone pour valider votre entrée en un clic.
+              Présentez ce QR Code à l'entrée de la soirée. L'équipe d'organisation le scannera pour valider votre entrée.
             </p>
           </div>
 
-          {/* Validation Instructions */}
-          <div className="glass p-6 rounded-3xl border border-white/5 text-left space-y-4 text-xs leading-relaxed text-white/80">
-            <h3 className="font-bold text-sm text-white uppercase tracking-wider border-b border-white/5 pb-2">
-              ℹ️ Comment accéder à l'événement ?
-            </h3>
-            <ol className="list-decimal list-inside space-y-3">
-              <li>
-                Votre réservation est <b>déjà validée</b> grâce à votre paiement sécurisé.
-              </li>
-              <li>
-                Conservez précieusement votre <b>Code Unique ({code})</b> ou faites une capture d'écran de cette page.
-              </li>
-              <li>
-                Retournez sur la page de l'événement et insérez votre Code Unique dans la section <b>« Lieu Secret »</b> pour dévoiler instantanément la localisation exacte !
-              </li>
-            </ol>
-          </div>
-
           {/* Action buttons */}
-          <div className="flex flex-col gap-4 items-center">
+          <div className="flex flex-col gap-4 items-center pt-2">
             <Link
               href={`/evenements/${event.slug}`}
-              className="flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:from-purple-500 hover:via-pink-500 hover:to-orange-400 text-white font-extrabold text-xs sm:text-sm uppercase tracking-widest shadow-[0_0_20px_rgba(219,39,119,0.25)] transition-all duration-300 active:scale-[0.98] w-full sm:w-auto"
+              className="flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-extrabold text-xs uppercase tracking-widest border border-white/10 transition-all active:scale-[0.98] w-full sm:w-auto"
             >
-              <ArrowLeft className="w-4 h-4" /> Voir le Lieu Secret / Retour
+              <ArrowLeft className="w-4 h-4" /> Voir la page de l'événement
             </Link>
 
             <div className="flex items-center gap-4 text-xs text-white/50 mt-2">
@@ -254,7 +437,7 @@ export default function ThankYouPage({ params }: PageProps) {
             </div>
             <div className="flex items-center gap-1.5">
               <MapPin className="w-4 h-4 text-pink-400" />
-              <span>Adresse débloquée après validation</span>
+              <span>{secretAddress || 'Lieu Secret'}</span>
             </div>
           </div>
 

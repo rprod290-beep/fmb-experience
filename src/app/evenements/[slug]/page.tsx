@@ -1,10 +1,10 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { supabase, Event, DJ, TicketTier, Buyer } from '@/lib/supabase';
-import { registerBuyer } from '@/app/actions';
+import { registerBuyer, verifyConfirmationCodeAndGetAddress } from '@/app/actions';
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
 const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || 'BAAzIRcORaDPy0QiXRb9We8sFVS2MhA3BlKS5JsgjS8Sen5EuZPENuMmsserQ3-ift8uqgMT1qX9zx-O6M';
@@ -23,7 +23,9 @@ import {
   Copy,
   Building2,
   Landmark,
-  CheckCircle2
+  CheckCircle2,
+  AlertTriangle,
+  Clipboard
 } from 'lucide-react';
 
 interface PageProps {
@@ -35,6 +37,7 @@ interface PageProps {
 export default function EventDetailsPage({ params }: PageProps) {
   const { slug } = params;
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [event, setEvent] = useState<Event | null>(null);
   const [djs, setDjs] = useState<DJ[]>([]);
@@ -42,6 +45,13 @@ export default function EventDetailsPage({ params }: PageProps) {
   const [buyers, setBuyers] = useState<Buyer[]>([]);
   
   const [loading, setLoading] = useState(true);
+
+  // Secret Address Reveal State
+  const [secretCodeInput, setSecretCodeInput] = useState('');
+  const [revealedAddress, setRevealedAddress] = useState<string | null>(null);
+  const [revealingAddress, setRevealingAddress] = useState(false);
+  const [revealError, setRevealError] = useState<string | null>(null);
+  const [copiedRevealedAddress, setCopiedRevealedAddress] = useState(false);
 
   // Modal State
   const [selectedTier, setSelectedTier] = useState<TicketTier | null>(null);
@@ -140,7 +150,7 @@ export default function EventDetailsPage({ params }: PageProps) {
         if (buyersError) {
           console.error("Erreur lors de la récupération des acheteurs:", buyersError);
         } else {
-          setBuyers(buyersData || []);
+          setBuyers((buyersData as any) || []);
         }
       } catch (err) {
         console.error('Erreur:', err);
@@ -153,6 +163,35 @@ export default function EventDetailsPage({ params }: PageProps) {
       fetchEventData();
     }
   }, [slug]);
+
+  const handleRevealAddress = async (codeToVerify?: string, eventIdToUse?: string) => {
+    const targetCode = (codeToVerify || secretCodeInput).trim().toUpperCase();
+    const targetEventId = eventIdToUse || event?.id;
+    if (!targetEventId || !targetCode) return;
+    setRevealingAddress(true);
+    setRevealError(null);
+    try {
+      const res = await verifyConfirmationCodeAndGetAddress(targetEventId, targetCode);
+      if (res.success && res.address) {
+        setRevealedAddress(res.address);
+      } else {
+        setRevealError(res.error || "Code invalide ou réservation en attente de validation.");
+      }
+    } catch (err: any) {
+      setRevealError("Erreur lors de la vérification du code.");
+    } finally {
+      setRevealingAddress(false);
+    }
+  };
+
+  useEffect(() => {
+    const urlCode = searchParams?.get('code');
+    if (urlCode && event?.id) {
+      const formatted = urlCode.toUpperCase().trim();
+      setSecretCodeInput(formatted);
+      handleRevealAddress(formatted, event.id);
+    }
+  }, [searchParams, event?.id]);
 
   // Calcule le nombre d'unités vendues pour chaque catégorie
   const getSoldUnitsForTier = (tierId: string, tierLabel: string) => {
@@ -525,11 +564,16 @@ export default function EventDetailsPage({ params }: PageProps) {
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="w-4 h-4 text-pink-400" />
-              <span>
-                {event.category === 'trip' 
-                  ? (event.address || 'Adresse à venir') 
-                  : 'Lieu Secret'}
-              </span>
+              {event.category === 'trip' ? (
+                <span>{event.address || 'Adresse à venir'}</span>
+              ) : (
+                <a
+                  href="#lieu-secret"
+                  className="text-pink-400 hover:text-pink-300 font-bold transition-colors flex items-center gap-1.5"
+                >
+                  Lieu Secret <span className="text-[10px] text-white/50 font-normal underline">(Dévoiler avec mon code)</span>
+                </a>
+              )}
             </div>
           </div>
         </div>
@@ -597,6 +641,134 @@ export default function EventDetailsPage({ params }: PageProps) {
               <p className="text-white/70 text-sm whitespace-pre-wrap leading-relaxed">
                 {event.description}
               </p>
+            </div>
+          )}
+
+          {/* Section Lieu Secret pour les soirées */}
+          {event.category !== 'trip' && (
+            <div id="lieu-secret" className="glass p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-pink-500/20 bg-pink-950/10 space-y-5 scroll-mt-24">
+              <div className="flex items-center justify-between border-b border-pink-500/20 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-2 rounded-xl bg-pink-500/20 text-pink-400">
+                    <MapPin className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-white">
+                      📍 Dévoiler le Lieu Secret
+                    </h3>
+                    <p className="text-xs text-white/60">
+                      Entrez votre code de réservation pour débloquer l'adresse exacte
+                    </p>
+                  </div>
+                </div>
+                {revealedAddress && (
+                  <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Débloqué
+                  </span>
+                )}
+              </div>
+
+              {revealedAddress ? (
+                <div className="p-5 rounded-2xl bg-black/40 border border-emerald-500/30 space-y-4">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-wider text-emerald-400 font-bold">
+                      Adresse confirmée de l'événement
+                    </p>
+                    <p className="text-lg sm:text-xl font-bold text-white mt-1">
+                      {revealedAddress}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-white/5">
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(revealedAddress);
+                        setCopiedRevealedAddress(true);
+                        setTimeout(() => setCopiedRevealedAddress(false), 2000);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-white text-xs font-semibold border border-white/10 transition-colors"
+                    >
+                      {copiedRevealedAddress ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>Adresse copiée !</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5 text-white/70" />
+                          <span>Copier l'adresse</span>
+                        </>
+                      )}
+                    </button>
+
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(revealedAddress)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 text-xs font-semibold border border-purple-500/30 transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Google Maps</span>
+                    </a>
+
+                    <a
+                      href={`https://maps.apple.com/?q=${encodeURIComponent(revealedAddress)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-pink-600/20 hover:bg-pink-600/30 text-pink-300 text-xs font-semibold border border-pink-500/30 transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      <span>Apple Plans</span>
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="relative flex-1">
+                      <Ticket className="w-4 h-4 text-white/40 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Ex: FMB-XXXXXX ou 8 caractères"
+                        value={secretCodeInput}
+                        onChange={(e) => setSecretCodeInput(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleRevealAddress();
+                          }
+                        }}
+                        className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-white placeholder-white/30 text-sm font-mono uppercase focus:outline-none focus:border-pink-500 transition-colors"
+                      />
+                    </div>
+                    <button
+                      onClick={() => handleRevealAddress()}
+                      disabled={revealingAddress || !secretCodeInput.trim()}
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-xs font-bold uppercase tracking-wider disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                    >
+                      {revealingAddress ? (
+                        <>
+                          <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Vérification...</span>
+                        </>
+                      ) : (
+                        <span>Débloquer le lieu</span>
+                      )}
+                    </button>
+                  </div>
+
+                  {revealError && (
+                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                      <span>{revealError}</span>
+                    </div>
+                  )}
+
+                  <p className="text-[11px] text-white/40">
+                    💡 Votre code unique vous a été délivré lors de la confirmation d'achat ou par l'organisateur.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -1086,6 +1258,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                           style={{ layout: "vertical", shape: "rect", label: "pay" }}
                           createOrder={(data, actions) => {
                             return actions.order.create({
+                              intent: "CAPTURE",
                               purchase_units: [{
                                 amount: {
                                   currency_code: "EUR",
@@ -1154,6 +1327,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                           style={{ layout: "vertical", shape: "rect", label: "pay" }}
                           createOrder={(data, actions) => {
                             return actions.order.create({
+                              intent: "CAPTURE",
                               purchase_units: [{
                                 amount: {
                                   currency_code: "EUR",

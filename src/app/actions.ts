@@ -221,3 +221,81 @@ export async function adminAddBuyer(params: {
   }
 }
 
+/**
+ * Recherche et dévoile l'adresse secrète d'un événement directement à partir du code de réservation
+ */
+export async function getSecretAddressByCode(
+  code: string
+): Promise<{
+  success: boolean;
+  address?: string;
+  eventName?: string;
+  eventSlug?: string;
+  buyerName?: string;
+  error?: string;
+}> {
+  try {
+    if (!code || !code.trim()) {
+      return { success: false, error: 'Veuillez saisir votre code de réservation.' };
+    }
+
+    const cleanCode = code.trim().toUpperCase();
+
+    // 1. Chercher le buyer correspondant
+    const { data: buyer, error: buyerError } = await supabaseServer
+      .from('buyers')
+      .select('event_id, status, name_or_pseudo')
+      .eq('confirmation_code', cleanCode)
+      .maybeSingle();
+
+    if (buyerError || !buyer) {
+      return {
+        success: false,
+        error: 'Code introuvable. Veuillez vérifier votre saisie ou contacter les organisateurs.',
+      };
+    }
+
+    if (buyer.status !== 'verified' && buyer.status !== 'added_close_friends') {
+      return {
+        success: false,
+        error: 'Votre réservation est en cours de validation ou non confirmée.',
+      };
+    }
+
+    // 2. Débloquer l'adresse via la RPC sécurisée
+    const { data: address, error: addressError } = await supabaseServer.rpc(
+      'get_event_secret_address',
+      {
+        p_event_id: buyer.event_id,
+        p_code: cleanCode,
+      }
+    );
+
+    if (addressError || !address) {
+      return {
+        success: false,
+        error: "Impossible de récupérer l'adresse secrète pour cet événement.",
+      };
+    }
+
+    // 3. Récupérer les détails de l'événement
+    const { data: eventData } = await supabaseServer
+      .from('events')
+      .select('title, slug')
+      .eq('id', buyer.event_id)
+      .maybeSingle();
+
+    return {
+      success: true,
+      address,
+      eventName: eventData?.title,
+      eventSlug: eventData?.slug,
+      buyerName: buyer.name_or_pseudo,
+    };
+  } catch (err: any) {
+    console.error('Erreur getSecretAddressByCode:', err);
+    return { success: false, error: 'Une erreur serveur est survenue.' };
+  }
+}
+
+

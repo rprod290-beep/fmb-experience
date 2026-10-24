@@ -61,6 +61,7 @@ export default function EditEventPage({ params }: PageProps) {
     display_order: '0', 
     is_active: true,
     capacity: '',
+    max_capacity: '100',
     stock_quantity: ''
   });
   const [editingTierId, setEditingTierId] = useState<string | null>(null);
@@ -236,7 +237,7 @@ export default function EditEventPage({ params }: PageProps) {
           
         if (!tierError && tierData) {
           setTicketTiers(prev => [...prev, tierData].sort((a, b) => a.display_order - b.display_order));
-          setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', max_capacity: '100', is_active: true });
+          setTierForm({ label: '', description: '', price: '', payment_link: '', paypal_link: '', display_order: '0', max_capacity: '100', is_active: true, capacity: '', stock_quantity: '' });
         }
       }
 
