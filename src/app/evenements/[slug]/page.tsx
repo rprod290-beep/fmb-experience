@@ -72,18 +72,6 @@ export default function EventDetailsPage({ params }: PageProps) {
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedIban, setCopiedIban] = useState(false);
   const [activePaymentTab, setActivePaymentTab] = useState<'paypal' | 'wire'>('paypal');
-  const [isApplePayAvailable, setIsApplePayAvailable] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined' && (window as any).ApplePaySession) {
-      try {
-        const canPay = (window as any).ApplePaySession.canMakePayments();
-        setIsApplePayAvailable(canPay);
-      } catch (e) {
-        console.log('Apple Pay check:', e);
-      }
-    }
-  }, []);
 
   useEffect(() => {
     const needed = (selectedTier?.capacity && selectedTier.capacity > 1)
@@ -345,121 +333,6 @@ export default function EventDetailsPage({ params }: PageProps) {
     }
   };
 
-  const handleApplePayClick = async () => {
-    if (!selectedTier || !event) return;
-
-    if (!buyerName.trim()) {
-      setRegistrationError("Veuillez saisir votre nom complet avant de procéder au paiement avec Apple Pay.");
-      return;
-    }
-
-    if (event.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1) {
-      if (participants.some(p => !p.trim())) {
-        setRegistrationError("Veuillez renseigner le nom de tous les participants.");
-        return;
-      }
-    }
-
-    setRegistrationError('');
-    const ApplePaySession = (window as any).ApplePaySession;
-
-    if (!ApplePaySession) {
-      setRegistrationError("Apple Pay n'est pas pris en charge sur ce navigateur. Ouvrez le site dans Safari sur iOS/Mac.");
-      return;
-    }
-
-    try {
-      const totalPrice = (ticketCount * selectedTier.price).toFixed(2);
-      const paymentRequest = {
-        countryCode: 'FR',
-        currencyCode: 'EUR',
-        supportedNetworks: ['visa', 'masterCard', 'cartesBancaires', 'amex'],
-        merchantCapabilities: ['supports3DS'],
-        total: {
-          label: `FMB Experience - ${selectedTier.label}`,
-          amount: totalPrice
-        }
-      };
-
-      const session = new ApplePaySession(3, paymentRequest);
-
-      session.onvalidatemerchant = async (evt: any) => {
-        try {
-          if (typeof window !== 'undefined' && (window as any).paypal && (window as any).paypal.Applepay) {
-            const applepay = (window as any).paypal.Applepay();
-            const validateResult = await applepay.validateMerchant({
-              validationUrl: evt.validationUrl,
-              clientAuthorization: paypalClientId
-            });
-            session.completeMerchantValidation(validateResult.merchantSession);
-            return;
-          }
-        } catch (paypalErr) {
-          console.error("PayPal Apple Pay validateMerchant error:", paypalErr);
-        }
-
-        try {
-          const res = await fetch('/api/applepay-validate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ validationUrl: evt.validationUrl })
-          });
-          if (res.ok) {
-            const merchantSession = await res.json();
-            session.completeMerchantValidation(merchantSession);
-          } else {
-            session.completeMerchantValidation({});
-          }
-        } catch (err) {
-          session.completeMerchantValidation({});
-        }
-      };
-
-      session.onpaymentauthorized = async (evt: any) => {
-        setRegistering(true);
-        try {
-          const partsToSend = getPartsToSend();
-
-          const result = await registerBuyer(
-            event!.id, 
-            buyerName.trim(), 
-            selectedTier.label, 
-            ticketCount, 
-            'verified',
-            selectedTier.id,
-            partsToSend
-          );
-
-          if (result.success && result.confirmationCode) {
-            session.completePayment(ApplePaySession.STATUS_SUCCESS);
-            const savedLabel = selectedTier.label;
-            setSelectedTier(null);
-            setBuyerName('');
-            setTicketCount(1);
-            setParticipants([]);
-            router.push(`/evenements/${event!.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(savedLabel)}&quantity=${ticketCount}`);
-          } else {
-            session.completePayment(ApplePaySession.STATUS_FAILURE);
-            setRegistrationError(result.error || "Paiement réussi mais échec de l'enregistrement.");
-          }
-        } catch (err) {
-          session.completePayment(ApplePaySession.STATUS_FAILURE);
-          setRegistrationError("Erreur lors de la validation du paiement Apple Pay.");
-        } finally {
-          setRegistering(false);
-        }
-      };
-
-      session.oncancel = () => {
-        console.log('Session Apple Pay annulée');
-      };
-
-      session.begin();
-    } catch (err) {
-      console.error("Apple Pay Exception:", err);
-      setRegistrationError("Impossible de lancer la session Apple Pay.");
-    }
-  };
 
   const formatDate = (dateString: string, endDateString?: string | null) => {
     const start = new Date(dateString);
@@ -516,7 +389,7 @@ export default function EventDetailsPage({ params }: PageProps) {
   }
 
   return (
-    <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "EUR", enableFunding: "applepay,card", components: "buttons,applepay,funding-eligibility" }}>
+    <PayPalScriptProvider options={{ clientId: paypalClientId, currency: "EUR", enableFunding: "card", components: "buttons,funding-eligibility" }}>
       <div className="min-h-screen flex flex-col bg-[#050508] text-white pb-20 relative overflow-hidden">
         {/* Dynamic Background Aurora Glow */}
         <div className="fixed inset-0 -z-30 overflow-hidden pointer-events-none">
@@ -1265,7 +1138,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                               : 'text-zinc-400 hover:text-white'
                           }`}
                         >
-                          💳 Carte / Apple Pay / PayPal
+                          💳 Carte Bancaire / PayPal
                         </button>
                         <button
                           type="button"
@@ -1295,11 +1168,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                     ) : selectedTier.price > 0 ? (
                       <div className="pt-2 space-y-3">
                         {/* Visual Badges for Payment Methods */}
-                        <div className="flex items-center justify-center gap-2 py-2.5 px-3 bg-white/5 rounded-xl border border-white/10 text-center">
-                          <span className="text-[11px] font-black text-white flex items-center gap-1">
-                             Apple Pay
-                          </span>
-                          <span className="text-white/20">•</span>
+                        <div className="flex items-center justify-center gap-2 py-2 px-3 bg-white/5 rounded-xl border border-white/10 text-center">
                           <span className="text-[11px] font-black text-white flex items-center gap-1">
                             💳 Carte Bancaire
                           </span>
@@ -1308,69 +1177,6 @@ export default function EventDetailsPage({ params }: PageProps) {
                             PayPal
                           </span>
                         </div>
-
-                        {/* Dedicated Apple Pay PayPal Button */}
-                        <PayPalButtons
-                          fundingSource="applepay"
-                          style={{ layout: "vertical", shape: "rect", label: "pay" }}
-                          createOrder={(data, actions) => {
-                            return actions.order.create({
-                              intent: "CAPTURE",
-                              purchase_units: [{
-                                amount: {
-                                  currency_code: "EUR",
-                                  value: (ticketCount * selectedTier.price).toFixed(2)
-                                },
-                                description: `Billet ${selectedTier.label} - ${ticketCount} place(s) pour FMB Experience`
-                              }]
-                            });
-                          }}
-                          onClick={(data, actions) => {
-                            const valError = validateReservation();
-                            if (valError) {
-                              setRegistrationError(valError);
-                              return actions.reject();
-                            }
-                            setRegistrationError('');
-                            return actions.resolve();
-                          }}
-                          onApprove={async (data, actions) => {
-                            if (!actions.order) return;
-                            setRegistering(true);
-                            try {
-                              const details = await actions.order.capture();
-                              const partsToSend = getPartsToSend();
-
-                              const result = await registerBuyer(
-                                event!.id, 
-                                buyerName.trim(), 
-                                selectedTier.label, 
-                                ticketCount, 
-                                'verified',
-                                selectedTier.id,
-                                partsToSend
-                              );
-                              if (result.success && result.confirmationCode) {
-                                const savedLabel = selectedTier.label;
-                                setSelectedTier(null);
-                                setBuyerName('');
-                                setTicketCount(1);
-                                setParticipants([]);
-                                router.push(`/evenements/${event!.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(savedLabel)}&quantity=${ticketCount}`);
-                              } else {
-                                setRegistrationError(result.error || "Paiement réussi mais échec de l'enregistrement. Contactez le support.");
-                              }
-                            } catch (err) {
-                              console.error(err);
-                              setRegistrationError("Une erreur s'est produite lors de la validation du paiement.");
-                            } finally {
-                              setRegistering(false);
-                            }
-                          }}
-                          onError={(err) => {
-                            console.log("Apple Pay optional button skipped or not supported on this browser:", err);
-                          }}
-                        />
 
                         {/* Standard PayPal & Cards Buttons */}
                         <PayPalButtons
