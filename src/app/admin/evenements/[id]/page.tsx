@@ -646,7 +646,7 @@ export default function EditEventPage({ params }: PageProps) {
   const handleAddManualBuyer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!buyerAddForm.name_or_pseudo.trim()) {
-      alert("Veuillez saisir un nom ou pseudo.");
+      alert("Veuillez renseigner le prénom et nom du titulaire.");
       return;
     }
 
@@ -1394,15 +1394,15 @@ export default function EditEventPage({ params }: PageProps) {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {/* Nom ou Pseudo */}
+                {/* Prénom et Nom du titulaire */}
                 <div>
                   <label className="block font-semibold mb-1 text-zinc-300">
-                    Nom / Prénom ou Pseudo <span className="text-pink-500">*</span>
+                    Prénom et Nom du titulaire (Place 1) <span className="text-pink-500">*</span>
                   </label>
                   <input
                     type="text"
                     required
-                    placeholder="Ex: Lucas Martin"
+                    placeholder="Ex: Alain Dupont"
                     value={buyerAddForm.name_or_pseudo}
                     onChange={(e) => setBuyerAddForm({ ...buyerAddForm, name_or_pseudo: e.target.value })}
                     className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
@@ -1481,14 +1481,14 @@ export default function EditEventPage({ params }: PageProps) {
               {buyerAddForm.ticket_count > 1 && (
                 <div className="p-3 bg-zinc-900/60 border border-zinc-800/80 rounded-xl space-y-2">
                   <label className="block text-[11px] font-bold text-purple-300 uppercase tracking-wider">
-                    Prénoms des {buyerAddForm.ticket_count - 1} autre{buyerAddForm.ticket_count > 2 ? 's' : ''} participant{buyerAddForm.ticket_count > 2 ? 's' : ''} (Places 2 à {buyerAddForm.ticket_count}) :
+                    Prénom & Nom des {buyerAddForm.ticket_count - 1} autre{buyerAddForm.ticket_count > 2 ? 's' : ''} participant{buyerAddForm.ticket_count > 2 ? 's' : ''} (Places 2 à {buyerAddForm.ticket_count}) :
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                     {Array.from({ length: buyerAddForm.ticket_count - 1 }).map((_, idx) => (
                       <input
                         key={idx}
                         type="text"
-                        placeholder={`Prénom Place #${idx + 2}`}
+                        placeholder={`Place #${idx + 2} - Prénom et Nom (Ex: Sophie Martin)`}
                         value={buyerAddForm.additional_participants[idx] || ''}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -1582,7 +1582,7 @@ export default function EditEventPage({ params }: PageProps) {
                   <thead>
                     <tr className="bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-bold uppercase tracking-wider">
                       <th className="px-6 py-4">Code Unique</th>
-                      <th className="px-6 py-4 min-w-[280px]">Participants & Prénoms ({buyers.reduce((sum, b) => sum + (b.ticket_count || 1), 0)} places)</th>
+                      <th className="px-6 py-4 min-w-[280px]">Participants (Prénom & Nom) ({buyers.reduce((sum, b) => sum + (b.ticket_count || 1), 0)} places)</th>
                       <th className="px-6 py-4">Tarif</th>
                       <th className="px-6 py-4">Places</th>
                       <th className="px-6 py-4">Statut</th>
@@ -1643,11 +1643,11 @@ export default function EditEventPage({ params }: PageProps) {
                                     </span>
                                     {missingCompanionCount > 0 ? (
                                       <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse">
-                                        ⚠️ {missingCompanionCount} prénom{missingCompanionCount > 1 ? 's' : ''} à renseigner
+                                        ⚠️ {missingCompanionCount} participant{missingCompanionCount > 1 ? 's' : ''} à renseigner
                                       </span>
                                     ) : (
                                       <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                        ✓ Tous les prénoms saisis
+                                        ✓ Tous les participants saisis
                                       </span>
                                     )}
                                   </div>
@@ -1657,16 +1657,16 @@ export default function EditEventPage({ params }: PageProps) {
                                 <div className="space-y-1">
                                   <div className="flex items-center justify-between">
                                     <span className="text-[10px] font-bold text-purple-300 flex items-center gap-1">
-                                      👤 Place 1 {totalCount > 1 ? '(Titulaire)' : ''} :
+                                      👤 Place 1 {totalCount > 1 ? '(Titulaire / Acheteur principal)' : ''} :
                                     </span>
                                     {!buyer.name_or_pseudo?.trim() && (
-                                      <span className="text-[9px] text-amber-400 font-semibold">⚠️ Nom manquant</span>
+                                      <span className="text-[9px] text-amber-400 font-semibold">⚠️ Prénom et nom manquants</span>
                                     )}
                                   </div>
                                   <input
                                     type="text"
                                     value={buyer.name_or_pseudo || ''}
-                                    placeholder="Nom / Prénom du titulaire"
+                                    placeholder="Prénom et Nom du titulaire (Ex: Alain Dupont)"
                                     onChange={(e) => handleUpdateBuyerName(buyer.id, e.target.value)}
                                     className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 focus:border-purple-500 focus:outline-none px-2.5 py-1.5 rounded-lg text-white font-semibold w-full text-xs transition-colors"
                                   />
@@ -1679,7 +1679,7 @@ export default function EditEventPage({ params }: PageProps) {
                                 {neededSlots > 0 && (
                                   <div className="pt-2 border-t border-zinc-800/60 space-y-2">
                                     <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 block">
-                                      Prénoms des autres places ({neededSlots}) :
+                                      Prénom & Nom des autres participants ({neededSlots}) :
                                     </span>
                                     {Array.from({ length: neededSlots }).map((_, pIdx) => {
                                       const partName = currentParts[pIdx] || '';
@@ -1688,7 +1688,7 @@ export default function EditEventPage({ params }: PageProps) {
                                         <div key={pIdx} className="space-y-0.5">
                                           <div className="flex items-center justify-between">
                                             <span className="text-[10px] text-purple-300/80 font-mono">
-                                              Place {pIdx + 2} :
+                                              Place {pIdx + 2} - Prénom et Nom :
                                             </span>
                                             {isMissing && (
                                               <span className="text-[9px] text-amber-400 font-bold">
@@ -1699,7 +1699,7 @@ export default function EditEventPage({ params }: PageProps) {
                                           <input
                                             type="text"
                                             value={partName}
-                                            placeholder={`Prénom de la personne Place ${pIdx + 2}`}
+                                            placeholder={`Prénom et Nom Place ${pIdx + 2} (Ex: Sophie Martin)`}
                                             onChange={(e) => handleUpdateBuyerParticipant(buyer.id, pIdx, e.target.value)}
                                             className={`bg-zinc-900/90 border rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none transition-colors w-full ${
                                               isMissing 

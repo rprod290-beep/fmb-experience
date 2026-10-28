@@ -248,15 +248,15 @@ function ScanResultContent() {
                 <div className="flex items-center gap-3">
                   <User className="w-4 h-4 text-pink-400 flex-shrink-0" />
                   <div>
-                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Participant</span>
-                    <span className="font-extrabold text-white uppercase text-sm">{buyer.name_or_pseudo || 'Sans nom'}</span>
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Prénom & Nom (Titulaire)</span>
+                    <span className="font-extrabold text-white uppercase text-sm">{buyer.name_or_pseudo || 'Non renseigné'}</span>
                     {buyer.ticket_count > 1 && (
                       <div className="mt-2 p-2.5 bg-zinc-950/60 rounded-xl border border-zinc-800 space-y-1">
                         <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider block">
                           Liste des places ({buyer.ticket_count}) :
                         </span>
                         <p className="text-[11px] text-zinc-300">
-                          • Place 1 : <b className="text-white">{buyer.name_or_pseudo || 'Non renseigné'}</b>
+                          • Place 1 (Titulaire) : <b className="text-white">{buyer.name_or_pseudo || 'Non renseigné'}</b>
                         </p>
                         {Array.from({ length: buyer.ticket_count - 1 }).map((_, idx) => {
                           const pName = buyer.additional_participants?.[idx];

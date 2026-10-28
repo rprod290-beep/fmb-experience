@@ -426,7 +426,7 @@ export default function AdminDashboardPage() {
                                     Participants ({inlineBuyer.ticket_count} places) :
                                   </span>
                                   <p className="text-zinc-300">
-                                    • Place 1 : <b className="text-white font-extrabold">{inlineBuyer.name_or_pseudo || 'Non renseigné'}</b>
+                                    • Place 1 (Titulaire) : <b className="text-white font-extrabold">{inlineBuyer.name_or_pseudo || 'Non renseigné'}</b>
                                   </p>
                                   {inlineBuyer.additional_participants && inlineBuyer.additional_participants.map((part: string, pIdx: number) => (
                                     <p key={pIdx} className="text-zinc-300">
@@ -435,7 +435,7 @@ export default function AdminDashboardPage() {
                                   ))}
                                 </div>
                               ) : (
-                                <p className="text-zinc-400">Nom : <b className="text-white uppercase font-extrabold">{inlineBuyer.name_or_pseudo}</b></p>
+                                <p className="text-zinc-400">Prénom & Nom : <b className="text-white uppercase font-extrabold">{inlineBuyer.name_or_pseudo}</b></p>
                               )}
                               <p className="text-zinc-400">Billet : <b className="text-white font-bold">{inlineBuyer.ticket_tier_label}</b> ({inlineBuyer.ticket_count} {inlineBuyer.ticket_count > 1 ? 'places' : 'place'})</p>
                               {inlineEvent && <p className="text-zinc-400">Soirée : <b className="text-white font-bold">{inlineEvent.title}</b></p>}

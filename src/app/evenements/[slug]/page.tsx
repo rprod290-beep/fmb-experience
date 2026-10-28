@@ -238,7 +238,7 @@ export default function EventDetailsPage({ params }: PageProps) {
 
   const validateReservation = (): string | null => {
     if (!buyerName.trim()) {
-      return "Veuillez renseigner votre prénom / nom (Place 1) avant de procéder.";
+      return "Veuillez renseigner votre Prénom et Nom (Place 1) avant de procéder.";
     }
 
     const needed = (selectedTier?.capacity && selectedTier.capacity > 1)
@@ -248,7 +248,7 @@ export default function EventDetailsPage({ params }: PageProps) {
     if (needed > 0) {
       for (let i = 0; i < needed; i++) {
         if (!participants[i]?.trim()) {
-          return `Veuillez renseigner le prénom de chaque participant (Place ${i + 2} manquante).`;
+          return `Veuillez renseigner le Prénom et Nom pour la Place ${i + 2}.`;
         }
       }
     }
@@ -1138,21 +1138,25 @@ export default function EventDetailsPage({ params }: PageProps) {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-white/60 uppercase tracking-widest mb-2">
-                      {event?.slug.includes('center-parcs') ? "Responsable de la réservation (Prénom)" : (event?.category === 'trip' ? 'Responsable de la réservation' : 'Nom Complet ou Pseudo')}
+                      {event?.slug.includes('center-parcs') 
+                        ? "Responsable de la réservation (Prénom et Nom)" 
+                        : (event?.category === 'trip' 
+                            ? 'Responsable de la réservation (Prénom et Nom)' 
+                            : (ticketCount > 1 ? 'Prénom et Nom (Titulaire / Acheteur principal)' : 'Prénom et Nom'))}
                     </label>
                     <input
                       type="text"
                       required
-                      placeholder="Ex: David"
+                      placeholder="Ex: Alain Dupont"
                       value={buyerName}
                       onChange={(e) => setBuyerName(e.target.value)}
                       className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-base sm:text-sm focus:outline-none focus:border-purple-500 transition-colors text-white"
                     />
-                    <p className="text-[9px] text-white/30 mt-1.5 flex items-start gap-1">
+                    <p className="text-[9px] text-white/40 mt-1.5 flex items-start gap-1">
                       <Info className="w-3.5 h-3.5 flex-shrink-0" />
                       {event?.slug.includes('center-parcs') 
-                        ? "Ce prénom sera utilisé pour l'enregistrement principal du cottage." 
-                        : "Ce nom permettra aux organisateurs d'associer votre paiement à votre billet."}
+                        ? "Ce nom sera utilisé pour l'enregistrement principal du cottage." 
+                        : "Renseignez votre vrai prénom et nom officiel (contrôle de pièce d'identité à l'entrée)."}
                     </p>
                   </div>
 
@@ -1160,18 +1164,18 @@ export default function EventDetailsPage({ params }: PageProps) {
                     <div className="space-y-4 pt-4 border-t border-white/5 mt-4">
                       <span className="block text-xs font-bold text-emerald-400 uppercase tracking-widest">
                         {event?.slug.includes('center-parcs')
-                          ? `Prénoms des autres personnes occupant le cottage (${selectedTier.capacity - 1} pers.)`
-                          : `Prénoms des autres participants (${selectedTier.capacity - 1} pers.)`}
+                          ? `Prénom et Nom des autres personnes occupant le cottage (${selectedTier.capacity - 1} pers.)`
+                          : `Prénom et Nom des autres participants (${selectedTier.capacity - 1} pers.)`}
                       </span>
                       {participants.map((p, idx) => (
                         <div key={idx} className="space-y-1">
                           <label className="block text-[10px] font-bold text-white/50 uppercase tracking-wider">
-                            Occupant {idx + 2}
+                            Occupant {idx + 2} - Prénom et Nom
                           </label>
                           <input
                             type="text"
                             required
-                            placeholder={`Prénom complet de l'occupant ${idx + 2}`}
+                            placeholder={`Prénom et Nom complet de l'occupant ${idx + 2}`}
                             value={p}
                             onChange={(e) => {
                               const newParts = [...participants];
@@ -1211,19 +1215,19 @@ export default function EventDetailsPage({ params }: PageProps) {
                     <div className="space-y-3 pt-3 border-t border-white/5">
                       <div className="flex items-center justify-between">
                         <span className="block text-xs font-bold text-purple-300 uppercase tracking-widest">
-                          Prénoms des autres places ({ticketCount - 1}) <span className="text-pink-500">*</span>
+                          Prénom et Nom des autres participants ({ticketCount - 1} place{ticketCount > 2 ? 's' : ''}) <span className="text-pink-500">*</span>
                         </span>
                         <span className="text-[10px] text-white/50">Obligatoire pour l'accès</span>
                       </div>
                       {Array.from({ length: ticketCount - 1 }).map((_, idx) => (
                         <div key={idx} className="space-y-1">
                           <label className="block text-[10px] font-bold text-white/70 uppercase tracking-wider">
-                            Place {idx + 2} (Prénom) <span className="text-pink-500">*</span>
+                            Place {idx + 2} - Prénom et Nom <span className="text-pink-500">*</span>
                           </label>
                           <input
                             type="text"
                             required
-                            placeholder={`Prénom de la personne Place ${idx + 2}`}
+                            placeholder={`Prénom et Nom Place ${idx + 2} (Ex: Sophie Martin)`}
                             value={participants[idx] || ''}
                             onChange={(e) => {
                               const newParts = [...participants];
