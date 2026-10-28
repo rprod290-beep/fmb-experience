@@ -34,6 +34,46 @@ interface PageProps {
   };
 }
 
+const toParisDateTimeLocal = (dateString?: string | null): string => {
+  if (!dateString) return '';
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return '';
+  const formatter = new Intl.DateTimeFormat('fr-CA', {
+    timeZone: 'Europe/Paris',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+  const parts = formatter.formatToParts(d);
+  const get = (type: string) => parts.find(p => p.type === type)?.value;
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
+};
+
+const formatToDateTimeLocal = toParisDateTimeLocal;
+
+const parseParisDateTimeToISO = (str?: string | null): string | null => {
+  if (!str) return null;
+  // If already full ISO with Z
+  if (str.includes('Z')) return new Date(str).toISOString();
+
+  // Format is YYYY-MM-DD or YYYY-MM-DDTHH:mm
+  const [datePart, timePart = '22:00'] = str.split('T');
+  if (!datePart) return null;
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour = 22, minute = 0] = timePart.split(':').map(Number);
+
+  // Compute exact timestamp in Europe/Paris
+  const approx = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  const parisHour = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Paris', hour: 'numeric', hour12: false }).format(approx));
+  const diffHours = (parisHour - hour + 24) % 24;
+  const offsetHours = diffHours > 12 ? diffHours - 24 : diffHours;
+  const exact = new Date(approx.getTime() - offsetHours * 60 * 60 * 1000);
+  return exact.toISOString();
+};
+
 export default function EditEventPage({ params }: PageProps) {
   const { id } = params;
   const router = useRouter();
@@ -117,11 +157,9 @@ export default function EditEventPage({ params }: PageProps) {
         return;
       }
 
-      // Convertir la date TIMESTAMPTZ en format YYYY-MM-DDThh:mm pour l'input datetime-local
-      const localDate = new Date(eventData.event_date).toISOString().slice(0, 16);
-      const localEndDate = eventData.end_date 
-        ? new Date(eventData.end_date).toISOString().slice(0, 16) 
-        : '';
+      // Convertir la date TIMESTAMPTZ en format local YYYY-MM-DDThh:mm pour l'input datetime-local sans décalage UTC
+      const localDate = formatToDateTimeLocal(eventData.event_date);
+      const localEndDate = formatToDateTimeLocal(eventData.end_date);
       setEvent({
         ...eventData,
         event_date: localDate,
@@ -167,9 +205,14 @@ export default function EditEventPage({ params }: PageProps) {
     setSaveSuccess(false);
 
     try {
-      // 1. Sauvegarder les infos de l'événement
-      const isoDate = new Date(event.event_date || '').toISOString();
-      const isoEndDate = event.end_date ? new Date(event.end_date).toISOString() : null;
+      // 1. Sauvegarder les infos de l'événement (conversion sécurisée en heure de Paris)
+      const isoDate = parseParisDateTimeToISO(event.event_date);
+      const isoEndDate = event.end_date ? parseParisDateTimeToISO(event.end_date) : null;
+      if (!isoDate) {
+        alert("Veuillez sélectionner une date valide pour l'événement.");
+        setSaving(false);
+        return;
+      }
       const payload = {
         title: event.title,
         slug: event.slug,
@@ -197,6 +240,13 @@ export default function EditEventPage({ params }: PageProps) {
         alert("Erreur lors de la sauvegarde : " + error.message);
         return;
       }
+
+      // Synchroniser le formulaire avec la date exacte en heure de Paris
+      setEvent(prev => ({
+        ...prev,
+        event_date: toParisDateTimeLocal(isoDate),
+        end_date: isoEndDate ? toParisDateTimeLocal(isoEndDate) : null
+      }));
 
       // 2. Si l'utilisateur a saisi un DJ mais a oublié de cliquer sur le bouton d'ajout
       if (djForm.name.trim()) {
@@ -477,55 +527,87 @@ export default function EditEventPage({ params }: PageProps) {
   };
 
   const handleUpdateBuyerNotes = async (buyerId: string, notes: string) => {
-    const { error } = await supabase
-      .from('buyers')
-      .update({ notes })
-      .eq('id', buyerId);
-
-    if (error) {
-      console.error(error);
-    } else {
-      setBuyers(prev => prev.map(b => b.id === buyerId ? { ...b, notes } : b));
+    setBuyers(prev => prev.map(b => b.id === buyerId ? { ...b, notes } : b));
+    try {
+      const { error } = await supabase
+        .from('buyers')
+        .update({ notes })
+        .eq('id', buyerId);
+      if (error) console.error("Erreur mise à jour notes:", error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const handleUpdateBuyerName = async (buyerId: string, name: string) => {
-    const { error } = await supabase
-      .from('buyers')
-      .update({ name_or_pseudo: name })
-      .eq('id', buyerId);
+    setBuyers(prev => prev.map(b => b.id === buyerId ? { ...b, name_or_pseudo: name } : b));
+    try {
+      const { error } = await supabase
+        .from('buyers')
+        .update({ name_or_pseudo: name })
+        .eq('id', buyerId);
+      if (error) console.error("Erreur mise à jour nom acheteur:", error);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-    if (error) {
-      console.error(error);
-    } else {
-      setBuyers(prev => prev.map(b => b.id === buyerId ? { ...b, name_or_pseudo: name } : b));
+  const handleUpdateBuyerParticipant = async (buyerId: string, partIndex: number, newName: string) => {
+    let updatedParts: string[] = [];
+    setBuyers(prev => prev.map(b => {
+      if (b.id !== buyerId) return b;
+      const totalTickets = b.ticket_count || 1;
+      const slots = Math.max(b.additional_participants?.length || 0, totalTickets > 1 ? totalTickets - 1 : 0);
+      const parts = [...(b.additional_participants || [])];
+      while (parts.length < slots) parts.push('');
+      parts[partIndex] = newName;
+      updatedParts = parts;
+      return { ...b, additional_participants: parts };
+    }));
+
+    try {
+      const { error } = await supabase
+        .from('buyers')
+        .update({ additional_participants: updatedParts })
+        .eq('id', buyerId);
+      if (error) console.error("Erreur mise à jour participant:", error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const handleUpdateBuyerTier = async (buyerId: string, tierLabel: string) => {
-    const { error } = await supabase
-      .from('buyers')
-      .update({ ticket_tier_label: tierLabel })
-      .eq('id', buyerId);
-
-    if (error) {
-      console.error(error);
-    } else {
-      setBuyers(prev => prev.map(b => b.id === buyerId ? { ...b, ticket_tier_label: tierLabel } : b));
+    setBuyers(prev => prev.map(b => b.id === buyerId ? { ...b, ticket_tier_label: tierLabel } : b));
+    try {
+      const { error } = await supabase
+        .from('buyers')
+        .update({ ticket_tier_label: tierLabel })
+        .eq('id', buyerId);
+      if (error) console.error("Erreur mise à jour tarif:", error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const handleUpdateBuyerTicketCount = async (buyerId: string, count: number) => {
     if (count < 1) return;
-    const { error } = await supabase
-      .from('buyers')
-      .update({ ticket_count: count })
-      .eq('id', buyerId);
+    setBuyers(prev => prev.map(b => {
+      if (b.id !== buyerId) return b;
+      const currentParts = [...(b.additional_participants || [])];
+      if (count > 1) {
+        while (currentParts.length < count - 1) currentParts.push('');
+      }
+      return { ...b, ticket_count: count, additional_participants: currentParts };
+    }));
 
-    if (error) {
-      console.error(error);
-    } else {
-      setBuyers(prev => prev.map(b => b.id === buyerId ? { ...b, ticket_count: count } : b));
+    try {
+      const { error } = await supabase
+        .from('buyers')
+        .update({ ticket_count: count })
+        .eq('id', buyerId);
+      if (error) console.error("Erreur mise à jour nombre de places:", error);
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -1399,14 +1481,14 @@ export default function EditEventPage({ params }: PageProps) {
               {buyerAddForm.ticket_count > 1 && (
                 <div className="p-3 bg-zinc-900/60 border border-zinc-800/80 rounded-xl space-y-2">
                   <label className="block text-[11px] font-bold text-purple-300 uppercase tracking-wider">
-                    Noms des {buyerAddForm.ticket_count - 1} accompagnant(s) (facultatif)
+                    Prénoms des {buyerAddForm.ticket_count - 1} autre{buyerAddForm.ticket_count > 2 ? 's' : ''} participant{buyerAddForm.ticket_count > 2 ? 's' : ''} (Places 2 à {buyerAddForm.ticket_count}) :
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                     {Array.from({ length: buyerAddForm.ticket_count - 1 }).map((_, idx) => (
                       <input
                         key={idx}
                         type="text"
-                        placeholder={`Participant #${idx + 2} (Nom / Prénom)`}
+                        placeholder={`Prénom Place #${idx + 2}`}
                         value={buyerAddForm.additional_participants[idx] || ''}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -1500,7 +1582,7 @@ export default function EditEventPage({ params }: PageProps) {
                   <thead>
                     <tr className="bg-zinc-900 border-b border-zinc-800 text-zinc-400 font-bold uppercase tracking-wider">
                       <th className="px-6 py-4">Code Unique</th>
-                      <th className="px-6 py-4">Nom / Pseudo</th>
+                      <th className="px-6 py-4 min-w-[280px]">Participants & Prénoms ({buyers.reduce((sum, b) => sum + (b.ticket_count || 1), 0)} places)</th>
                       <th className="px-6 py-4">Tarif</th>
                       <th className="px-6 py-4">Places</th>
                       <th className="px-6 py-4">Statut</th>
@@ -1543,27 +1625,96 @@ export default function EditEventPage({ params }: PageProps) {
                             <span className="text-[9px] text-emerald-400 font-bold block mt-0.5 animate-fade-in">Lien copié !</span>
                           )}
                         </td>
-                        {/* Name */}
-                        <td className="px-6 py-4">
-                          <input
-                            type="text"
-                            value={buyer.name_or_pseudo || ''}
-                            onChange={(e) => handleUpdateBuyerName(buyer.id, e.target.value)}
-                            className="bg-transparent border-b border-transparent hover:border-zinc-800 focus:border-purple-500 focus:outline-none py-1 text-white font-semibold w-full text-xs"
-                          />
-                          {buyer.email && (
-                            <span className="text-[10px] text-zinc-400 block mt-0.5">📧 {buyer.email}</span>
-                          )}
-                          {buyer.additional_participants && buyer.additional_participants.length > 0 && (
-                            <div className="mt-1.5 flex flex-wrap gap-1">
-                              <span className="text-[9px] font-bold text-zinc-400 block w-full">Participants :</span>
-                              {buyer.additional_participants.map((part, pIdx) => (
-                                <span key={pIdx} className="text-[9px] bg-purple-500/10 text-purple-300 border border-purple-500/20 px-1.5 py-0.5 rounded font-medium">
-                                  👤 {part}
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                        {/* Name & Participants */}
+                        <td className="px-6 py-4 min-w-[300px]">
+                          {(() => {
+                            const totalCount = buyer.ticket_count || 1;
+                            const currentParts = buyer.additional_participants || [];
+                            const neededSlots = Math.max(currentParts.length, totalCount > 1 ? totalCount - 1 : 0);
+                            const missingCompanionCount = Array.from({ length: neededSlots }).filter((_, idx) => !currentParts[idx]?.trim()).length;
+
+                            return (
+                              <div className="space-y-2.5">
+                                {/* Badge de groupe si multi-places */}
+                                {totalCount > 1 && (
+                                  <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-zinc-800/80">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+                                      🎟️ Groupe de {totalCount} places
+                                    </span>
+                                    {missingCompanionCount > 0 ? (
+                                      <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 animate-pulse">
+                                        ⚠️ {missingCompanionCount} prénom{missingCompanionCount > 1 ? 's' : ''} à renseigner
+                                      </span>
+                                    ) : (
+                                      <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                        ✓ Tous les prénoms saisis
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+
+                                {/* Titulaire / Place 1 */}
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-bold text-purple-300 flex items-center gap-1">
+                                      👤 Place 1 {totalCount > 1 ? '(Titulaire)' : ''} :
+                                    </span>
+                                    {!buyer.name_or_pseudo?.trim() && (
+                                      <span className="text-[9px] text-amber-400 font-semibold">⚠️ Nom manquant</span>
+                                    )}
+                                  </div>
+                                  <input
+                                    type="text"
+                                    value={buyer.name_or_pseudo || ''}
+                                    placeholder="Nom / Prénom du titulaire"
+                                    onChange={(e) => handleUpdateBuyerName(buyer.id, e.target.value)}
+                                    className="bg-zinc-900 border border-zinc-800 hover:border-zinc-700 focus:border-purple-500 focus:outline-none px-2.5 py-1.5 rounded-lg text-white font-semibold w-full text-xs transition-colors"
+                                  />
+                                  {buyer.email && (
+                                    <span className="text-[10px] text-zinc-400 block pl-0.5">📧 {buyer.email}</span>
+                                  )}
+                                </div>
+
+                                {/* Accompagnants pour chaque place supplémentaire */}
+                                {neededSlots > 0 && (
+                                  <div className="pt-2 border-t border-zinc-800/60 space-y-2">
+                                    <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 block">
+                                      Prénoms des autres places ({neededSlots}) :
+                                    </span>
+                                    {Array.from({ length: neededSlots }).map((_, pIdx) => {
+                                      const partName = currentParts[pIdx] || '';
+                                      const isMissing = !partName.trim();
+                                      return (
+                                        <div key={pIdx} className="space-y-0.5">
+                                          <div className="flex items-center justify-between">
+                                            <span className="text-[10px] text-purple-300/80 font-mono">
+                                              Place {pIdx + 2} :
+                                            </span>
+                                            {isMissing && (
+                                              <span className="text-[9px] text-amber-400 font-bold">
+                                                À renseigner
+                                              </span>
+                                            )}
+                                          </div>
+                                          <input
+                                            type="text"
+                                            value={partName}
+                                            placeholder={`Prénom de la personne Place ${pIdx + 2}`}
+                                            onChange={(e) => handleUpdateBuyerParticipant(buyer.id, pIdx, e.target.value)}
+                                            className={`bg-zinc-900/90 border rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none transition-colors w-full ${
+                                              isMissing 
+                                                ? 'border-amber-500/40 focus:border-amber-400 placeholder:text-amber-500/50' 
+                                                : 'border-zinc-800 hover:border-zinc-700 focus:border-purple-500 text-purple-200 font-medium'
+                                            }`}
+                                          />
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </td>
                         {/* Tier Label */}
                         <td className="px-6 py-4">

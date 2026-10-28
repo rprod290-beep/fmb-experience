@@ -420,12 +420,28 @@ export default function AdminDashboardPage() {
                             </div>
 
                             <div className="space-y-2 text-xs pt-1">
-                              <p className="text-zinc-400">Nom : <b className="text-white uppercase font-extrabold">{inlineBuyer.name_or_pseudo}</b></p>
+                              {inlineBuyer.ticket_count > 1 ? (
+                                <div className="bg-zinc-900/80 p-2.5 rounded-xl border border-zinc-800 space-y-1.5">
+                                  <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider block">
+                                    Participants ({inlineBuyer.ticket_count} places) :
+                                  </span>
+                                  <p className="text-zinc-300">
+                                    • Place 1 : <b className="text-white font-extrabold">{inlineBuyer.name_or_pseudo || 'Non renseigné'}</b>
+                                  </p>
+                                  {inlineBuyer.additional_participants && inlineBuyer.additional_participants.map((part: string, pIdx: number) => (
+                                    <p key={pIdx} className="text-zinc-300">
+                                      • Place {pIdx + 2} : <b className="text-purple-200 font-bold">{part || '⚠️ À renseigner'}</b>
+                                    </p>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-zinc-400">Nom : <b className="text-white uppercase font-extrabold">{inlineBuyer.name_or_pseudo}</b></p>
+                              )}
                               <p className="text-zinc-400">Billet : <b className="text-white font-bold">{inlineBuyer.ticket_tier_label}</b> ({inlineBuyer.ticket_count} {inlineBuyer.ticket_count > 1 ? 'places' : 'place'})</p>
                               {inlineEvent && <p className="text-zinc-400">Soirée : <b className="text-white font-bold">{inlineEvent.title}</b></p>}
                               {inlineBuyer.checked_in_count >= (inlineBuyer.ticket_count || 1) && inlineBuyer.checked_in_at && (
                                 <p className="text-yellow-500/80 text-[10px] bg-yellow-500/5 p-1.5 rounded border border-yellow-500/10 mt-1">
-                                  Dernier scan le : <b>{new Date(inlineBuyer.checked_in_at).toLocaleTimeString('fr-FR')}</b>
+                                  Dernier scan le : <b>{new Date(inlineBuyer.checked_in_at).toLocaleTimeString('fr-FR', { timeZone: 'Europe/Paris' })}</b>
                                 </p>
                               )}
                             </div>
@@ -645,9 +661,10 @@ export default function AdminDashboardPage() {
                         <Clock className="w-3.5 h-3.5 text-zinc-500 flex-shrink-0" />
                         <span className="line-clamp-1">
                           {event.category === 'trip' && event.end_date ? (
-                            `Du ${new Date(event.event_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} au ${new Date(event.end_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                            `Du ${new Date(event.event_date).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short' })} au ${new Date(event.end_date).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short', year: 'numeric' })}`
                           ) : (
                             new Date(event.event_date).toLocaleString('fr-FR', {
+                              timeZone: 'Europe/Paris',
                               day: 'numeric',
                               month: 'short',
                               year: 'numeric',

@@ -433,7 +433,7 @@ export default function ThankYouPage({ params }: PageProps) {
           <div className="pt-4 flex flex-wrap gap-6 justify-center text-xs text-white/40">
             <div className="flex items-center gap-1.5">
               <Calendar className="w-4 h-4 text-purple-400" />
-              <span className="capitalize">{new Date(event.event_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+              <span className="capitalize">{new Date(event.event_date).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short', year: 'numeric' })}</span>
             </div>
             <div className="flex items-center gap-1.5">
               <MapPin className="w-4 h-4 text-pink-400" />

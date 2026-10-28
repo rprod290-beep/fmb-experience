@@ -216,7 +216,7 @@ function ScanResultContent() {
                       Toutes les places de cette réservation ({buyer.ticket_count} {buyer.ticket_count > 1 ? 'places' : 'place'}) ont déjà été validées.<br />
                       Dernier scan enregistré à :<br />
                       <b className="text-zinc-200 mt-1 block">
-                        {buyer.checked_in_at ? new Date(buyer.checked_in_at).toLocaleTimeString('fr-FR') : '—'}
+                        {buyer.checked_in_at ? new Date(buyer.checked_in_at).toLocaleTimeString('fr-FR', { timeZone: 'Europe/Paris' }) : '—'}
                       </b>
                     </p>
                   </div>
@@ -250,6 +250,24 @@ function ScanResultContent() {
                   <div>
                     <span className="text-[10px] text-zinc-500 uppercase tracking-wider block">Participant</span>
                     <span className="font-extrabold text-white uppercase text-sm">{buyer.name_or_pseudo || 'Sans nom'}</span>
+                    {buyer.ticket_count > 1 && (
+                      <div className="mt-2 p-2.5 bg-zinc-950/60 rounded-xl border border-zinc-800 space-y-1">
+                        <span className="text-[10px] text-purple-400 font-bold uppercase tracking-wider block">
+                          Liste des places ({buyer.ticket_count}) :
+                        </span>
+                        <p className="text-[11px] text-zinc-300">
+                          • Place 1 : <b className="text-white">{buyer.name_or_pseudo || 'Non renseigné'}</b>
+                        </p>
+                        {Array.from({ length: buyer.ticket_count - 1 }).map((_, idx) => {
+                          const pName = buyer.additional_participants?.[idx];
+                          return (
+                            <p key={idx} className="text-[11px] text-zinc-300">
+                              • Place {idx + 2} : <b className={pName ? "text-purple-200" : "text-amber-400"}>{pName || '⚠️ À renseigner'}</b>
+                            </p>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
 

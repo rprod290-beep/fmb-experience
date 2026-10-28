@@ -67,6 +67,7 @@ export default function Home() {
     const start = new Date(dateString);
     if (!endDateString) {
       const options: Intl.DateTimeFormatOptions = {
+        timeZone: 'Europe/Paris',
         weekday: 'long',
         year: 'numeric',
         month: 'long',
@@ -79,11 +80,13 @@ export default function Home() {
 
     const end = new Date(endDateString);
     const startOptions: Intl.DateTimeFormatOptions = {
+      timeZone: 'Europe/Paris',
       weekday: 'long',
       day: 'numeric',
       month: 'long',
     };
     const endOptions: Intl.DateTimeFormatOptions = {
+      timeZone: 'Europe/Paris',
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -95,8 +98,8 @@ export default function Home() {
 
   const getDayAndMonth = (dateString: string) => {
     const date = new Date(dateString);
-    const day = date.getDate();
-    const month = date.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
+    const day = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric' }).format(date);
+    const month = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', month: 'short' }).format(date).replace('.', '');
     return { day, month };
   };
 

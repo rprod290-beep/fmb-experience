@@ -86,17 +86,33 @@ export default function EventDetailsPage({ params }: PageProps) {
   }, []);
 
   useEffect(() => {
-    if (selectedTier && selectedTier.capacity && selectedTier.capacity > 1) {
-      setParticipants(Array(selectedTier.capacity - 1).fill(''));
-    } else {
-      setParticipants([]);
-    }
+    const needed = (selectedTier?.capacity && selectedTier.capacity > 1)
+      ? selectedTier.capacity - 1
+      : (ticketCount > 1 ? ticketCount - 1 : 0);
+
+    setParticipants(prev => {
+      if (needed === 0) return [];
+      const next = [...prev];
+      while (next.length < needed) next.push('');
+      return next.slice(0, needed);
+    });
+
     if (event?.payment_mode === 'wire_transfer') {
       setActivePaymentTab('wire');
     } else {
       setActivePaymentTab('paypal');
     }
-  }, [selectedTier, event]);
+  }, [selectedTier, event, ticketCount]);
+
+  const getPartsToSend = () => {
+    const needed = (selectedTier?.capacity && selectedTier.capacity > 1)
+      ? selectedTier.capacity - 1
+      : (ticketCount > 1 ? ticketCount - 1 : 0);
+
+    if (needed <= 0) return null;
+    const cleaned = participants.slice(0, needed).map(p => p.trim());
+    return cleaned.length > 0 ? cleaned : null;
+  };
 
   useEffect(() => {
     async function fetchEventData() {
@@ -220,26 +236,40 @@ export default function EventDetailsPage({ params }: PageProps) {
     return ticketTiers.every(t => isTierSoldOut(t));
   };
 
-  const handleRegisterFreeTicket = async () => {
-    if (!event || !selectedTier || !buyerName.trim()) {
-      setRegistrationError("Veuillez saisir votre nom.");
-      return;
+  const validateReservation = (): string | null => {
+    if (!buyerName.trim()) {
+      return "Veuillez renseigner votre prénom / nom (Place 1) avant de procéder.";
     }
 
-    if (event.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1) {
-      if (participants.some(p => !p.trim())) {
-        setRegistrationError("Veuillez saisir le nom de tous les participants.");
-        return;
+    const needed = (selectedTier?.capacity && selectedTier.capacity > 1)
+      ? selectedTier.capacity - 1
+      : (ticketCount > 1 ? ticketCount - 1 : 0);
+
+    if (needed > 0) {
+      for (let i = 0; i < needed; i++) {
+        if (!participants[i]?.trim()) {
+          return `Veuillez renseigner le prénom de chaque participant (Place ${i + 2} manquante).`;
+        }
       }
+    }
+
+    return null;
+  };
+
+  const handleRegisterFreeTicket = async () => {
+    if (!event || !selectedTier) return;
+
+    const valError = validateReservation();
+    if (valError) {
+      setRegistrationError(valError);
+      return;
     }
 
     setRegistering(true);
     setRegistrationError('');
 
     try {
-      const partsToSend = event.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1
-        ? participants.map(p => p.trim())
-        : null;
+      const partsToSend = getPartsToSend();
 
       const result = await registerBuyer(
         event.id, 
@@ -274,25 +304,17 @@ export default function EventDetailsPage({ params }: PageProps) {
   const handleRegisterWireTransfer = async () => {
     if (!selectedTier || !event) return;
 
-    if (!buyerName.trim()) {
-      setRegistrationError("Veuillez saisir votre prénom avant de procéder à la réservation.");
+    const valError = validateReservation();
+    if (valError) {
+      setRegistrationError(valError);
       return;
-    }
-
-    if (event.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1) {
-      if (participants.some(p => !p.trim())) {
-        setRegistrationError("Veuillez renseigner les prénoms de tous les participants.");
-        return;
-      }
     }
 
     setRegistrationError('');
     setRegistering(true);
 
     try {
-      const partsToSend = event.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1 
-        ? participants.map(p => p.trim()) 
-        : null;
+      const partsToSend = getPartsToSend();
 
       const result = await registerBuyer(
         event.id, 
@@ -396,9 +418,7 @@ export default function EventDetailsPage({ params }: PageProps) {
       session.onpaymentauthorized = async (evt: any) => {
         setRegistering(true);
         try {
-          const partsToSend = event!.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1 
-            ? participants.map(p => p.trim()) 
-            : null;
+          const partsToSend = getPartsToSend();
 
           const result = await registerBuyer(
             event!.id, 
@@ -445,6 +465,7 @@ export default function EventDetailsPage({ params }: PageProps) {
     const start = new Date(dateString);
     if (!endDateString) {
       const options: Intl.DateTimeFormatOptions = {
+        timeZone: 'Europe/Paris',
         weekday: 'long',
         year: 'numeric',
         month: 'long',
@@ -457,11 +478,13 @@ export default function EventDetailsPage({ params }: PageProps) {
 
     const end = new Date(endDateString);
     const startOptions: Intl.DateTimeFormatOptions = {
+      timeZone: 'Europe/Paris',
       weekday: 'long',
       day: 'numeric',
       month: 'long',
     };
     const endOptions: Intl.DateTimeFormatOptions = {
+      timeZone: 'Europe/Paris',
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -1184,6 +1207,36 @@ export default function EventDetailsPage({ params }: PageProps) {
                     </div>
                   )}
 
+                  {event?.category !== 'trip' && ticketCount > 1 && (
+                    <div className="space-y-3 pt-3 border-t border-white/5">
+                      <div className="flex items-center justify-between">
+                        <span className="block text-xs font-bold text-purple-300 uppercase tracking-widest">
+                          Prénoms des autres places ({ticketCount - 1}) <span className="text-pink-500">*</span>
+                        </span>
+                        <span className="text-[10px] text-white/50">Obligatoire pour l'accès</span>
+                      </div>
+                      {Array.from({ length: ticketCount - 1 }).map((_, idx) => (
+                        <div key={idx} className="space-y-1">
+                          <label className="block text-[10px] font-bold text-white/70 uppercase tracking-wider">
+                            Place {idx + 2} (Prénom) <span className="text-pink-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder={`Prénom de la personne Place ${idx + 2}`}
+                            value={participants[idx] || ''}
+                            onChange={(e) => {
+                              const newParts = [...participants];
+                              newParts[idx] = e.target.value;
+                              setParticipants(newParts);
+                            }}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-base sm:text-sm focus:outline-none focus:border-purple-500 transition-colors text-white"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="flex justify-between items-center py-3 px-4 bg-white/5 rounded-xl border border-white/5">
                     <span className="text-xs text-white/50">Total à payer :</span>
                     <span className="text-sm font-extrabold text-white">
@@ -1269,15 +1322,10 @@ export default function EventDetailsPage({ params }: PageProps) {
                             });
                           }}
                           onClick={(data, actions) => {
-                            if (!buyerName.trim()) {
-                              setRegistrationError("Veuillez saisir votre nom complet avant de procéder au paiement.");
+                            const valError = validateReservation();
+                            if (valError) {
+                              setRegistrationError(valError);
                               return actions.reject();
-                            }
-                            if (event?.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1) {
-                              if (participants.some(p => !p.trim())) {
-                                setRegistrationError("Veuillez renseigner le nom de tous les participants.");
-                                return actions.reject();
-                              }
                             }
                             setRegistrationError('');
                             return actions.resolve();
@@ -1287,9 +1335,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                             setRegistering(true);
                             try {
                               const details = await actions.order.capture();
-                              const partsToSend = event!.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1 
-                                ? participants.map(p => p.trim()) 
-                                : null;
+                              const partsToSend = getPartsToSend();
 
                               const result = await registerBuyer(
                                 event!.id, 
@@ -1338,15 +1384,10 @@ export default function EventDetailsPage({ params }: PageProps) {
                             });
                           }}
                           onClick={(data, actions) => {
-                            if (!buyerName.trim()) {
-                              setRegistrationError("Veuillez saisir votre nom complet avant de procéder au paiement.");
+                            const valError = validateReservation();
+                            if (valError) {
+                              setRegistrationError(valError);
                               return actions.reject();
-                            }
-                            if (event?.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1) {
-                              if (participants.some(p => !p.trim())) {
-                                setRegistrationError("Veuillez renseigner le nom de tous les participants.");
-                                return actions.reject();
-                              }
                             }
                             setRegistrationError('');
                             return actions.resolve();
@@ -1356,9 +1397,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                             setRegistering(true);
                             try {
                               const details = await actions.order.capture();
-                              const partsToSend = event!.category === 'trip' && selectedTier.capacity && selectedTier.capacity > 1 
-                                ? participants.map(p => p.trim()) 
-                                : null;
+                              const partsToSend = getPartsToSend();
 
                               const result = await registerBuyer(
                                 event!.id, 
