@@ -87,7 +87,7 @@ export const BAR_MENU_ITEMS: MenuItem[] = [
     price: 60,
     badge: '✨ Formule VIP',
     badgeColor: 'pink',
-    description: 'Bouteille de vodka accompagnée de 3 canettes de Red Bull fraîches, seau à glace et gobelets.',
+    description: 'Bouteille de vodka accompagnée de 3 canettes de Red Bull fraîches et gobelets (avec glaçons disponibles).',
     volume: '70 cl + 3x25 cl',
     alcoholic: true,
   },

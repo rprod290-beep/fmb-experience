@@ -16,7 +16,8 @@ import {
   MapPin, 
   ExternalLink,
   QrCode,
-  XCircle
+  XCircle,
+  Wine
 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
@@ -334,7 +335,16 @@ export default function AdminDashboardPage() {
             <p className="text-xs text-zinc-400 mt-1">Créez, modifiez et gérez vos événements ainsi que les listes d'acheteurs.</p>
           </div>
 
-          <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <Link
+              href="/carte/qr"
+              target="_blank"
+              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-pink-950/40 hover:bg-pink-900/50 text-pink-300 border border-pink-800/50 font-bold text-xs uppercase tracking-wider transition-all active:scale-[0.98] shadow-md shadow-pink-950/20"
+            >
+              <Wine className="w-4 h-4 text-pink-400" />
+              <span>Carte Bar & QR</span>
+            </Link>
+
             <button
               onClick={() => setScannerOpen(!scannerOpen)}
               className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all active:scale-[0.98] border ${

@@ -399,6 +399,13 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+            <Link
+              href="/carte"
+              className="flex items-center gap-1.5 text-white/60 hover:text-pink-400 transition-colors font-medium"
+            >
+              <span>🍹 Carte des Boissons</span>
+            </Link>
+
             {featuredEvent && (
               <a
                 href={`mailto:${featuredEvent.contact_email}`}
