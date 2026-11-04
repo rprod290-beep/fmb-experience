@@ -430,7 +430,7 @@ export default function EditEventPage({ params }: PageProps) {
           description: tierForm.description.trim() || null,
           price: parseFloat(tierForm.price),
           display_order: parseInt(tierForm.display_order) || 0,
-          max_capacity: parseInt(tierForm.max_capacity) || 100,
+          max_capacity: event.category === 'trip' ? (stockQuantityValue || 100) : (parseInt(tierForm.max_capacity) || 100),
           is_active: tierForm.is_active,
           capacity: capacityValue,
           stock_quantity: stockQuantityValue
@@ -458,7 +458,7 @@ export default function EditEventPage({ params }: PageProps) {
           payment_link: tierForm.payment_link.trim() || 'https://paypal.com',
           paypal_link: tierForm.paypal_link.trim() || 'https://paypal.com',
           display_order: parseInt(tierForm.display_order) || 0,
-          max_capacity: parseInt(tierForm.max_capacity) || 100,
+          max_capacity: event.category === 'trip' ? (stockQuantityValue || 100) : (parseInt(tierForm.max_capacity) || 100),
           is_active: tierForm.is_active,
           capacity: capacityValue,
           stock_quantity: stockQuantityValue
@@ -835,10 +835,12 @@ export default function EditEventPage({ params }: PageProps) {
         {/* Title Block */}
         <div className="border-b border-zinc-800 pb-4">
           <h2 className="text-2xl font-black text-white uppercase tracking-tight">
-            {event.title || 'Soirée Vierge'}
+            {event.title || (event.category === 'trip' ? 'Nouveau Voyage' : 'Nouvelle Soirée')}
           </h2>
           <p className="text-xs text-zinc-400 mt-1">
-            Configurez les détails, importez le flyer, gérez la line-up, configurez les vagues de billetterie et vérifiez les preuves de paiement.
+            {event.category === 'trip'
+              ? "Configurez les informations du séjour, définissez les formules d'hébergement et suivez les règlements des voyageurs."
+              : "Configurez les détails, importez le flyer, gérez la line-up, configurez les vagues de billetterie et vérifiez les preuves de paiement."}
           </p>
         </div>
 
@@ -855,7 +857,7 @@ export default function EditEventPage({ params }: PageProps) {
                 <input
                   type="text"
                   required
-                  placeholder="Ex: DEAD OR ALIVE ou Center Parcs"
+                  placeholder={event.category === 'trip' ? "Ex: Week-end Center Parcs ou Ski Val Thorens" : "Ex: DEAD OR ALIVE"}
                   value={event.title || ''}
                   onChange={(e) => setEvent({ ...event, title: e.target.value })}
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-purple-500"
@@ -867,7 +869,7 @@ export default function EditEventPage({ params }: PageProps) {
                 <input
                   type="text"
                   required
-                  placeholder="ex: dead-or-alive-2"
+                  placeholder={event.category === 'trip' ? "ex: center-parcs-printemps" : "ex: dead-or-alive-2"}
                   value={event.slug || ''}
                   onChange={(e) => setEvent({ ...event, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '-') })}
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-purple-500 font-mono"
@@ -879,7 +881,7 @@ export default function EditEventPage({ params }: PageProps) {
               <label className="block font-semibold mb-1.5 text-zinc-300">Sous-titre / Accroche</label>
               <input
                 type="text"
-                placeholder="Ex: L'expérience exclusive"
+                placeholder={event.category === 'trip' ? "Ex: Séjour 4 jours & 3 nuits en cottage tout confort" : "Ex: L'expérience exclusive"}
                 value={event.subtitle || ''}
                 onChange={(e) => setEvent({ ...event, subtitle: e.target.value })}
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-purple-500"
@@ -900,7 +902,9 @@ export default function EditEventPage({ params }: PageProps) {
               </div>
 
               <div>
-                <label className="block font-semibold mb-1.5 text-zinc-300">Date de Début</label>
+                <label className="block font-semibold mb-1.5 text-zinc-300">
+                  {event.category === 'trip' ? "Date de Départ du séjour" : "Date et heure de début"}
+                </label>
                 <input
                   type="datetime-local"
                   required
@@ -911,7 +915,9 @@ export default function EditEventPage({ params }: PageProps) {
               </div>
 
               <div>
-                <label className="block font-semibold mb-1.5 text-zinc-300">Date de Fin (Voyages)</label>
+                <label className="block font-semibold mb-1.5 text-zinc-300">
+                  {event.category === 'trip' ? "Date de Retour du séjour" : "Date et heure de fin (optionnel)"}
+                </label>
                 <input
                   type="datetime-local"
                   value={event.end_date || ''}
@@ -974,11 +980,13 @@ export default function EditEventPage({ params }: PageProps) {
               )}
 
               <div>
-                <label className="block font-semibold mb-1.5 text-zinc-300">Image de couverture (Flyer)</label>
+                <label className="block font-semibold mb-1.5 text-zinc-300">
+                  {event.category === 'trip' ? "Affiche officielle / Photo du séjour" : "Image de couverture (Flyer)"}
+                </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="URL de l'image de couverture..."
+                    placeholder={event.category === 'trip' ? "URL de l'affiche ou photo du séjour..." : "URL de l'image de couverture..."}
                     value={event.cover_image_url || ''}
                     onChange={(e) => setEvent({ ...event, cover_image_url: e.target.value })}
                     className="flex-grow bg-zinc-950 border border-zinc-800 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-purple-500"
@@ -1063,223 +1071,108 @@ export default function EditEventPage({ params }: PageProps) {
           </form>
         </div>
 
-        {/* DJs & TICKET TIERS GRID SPLIT */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
-          {/* DJs COLUMN */}
+        {/* SECTION 2: DJS & TIERS (SOIRÉES) OU FORMULES & HÉBERGEMENTS (VOYAGES) */}
+        {event.category === 'trip' ? (
+          /* SECTION DÉDIÉE VOYAGES: FORMULES & HÉBERGEMENTS */
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-6">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-800 pb-3 flex items-center gap-2">
-              {event.category === 'trip' ? (
-                <>
-                  <Sparkles className="w-4 h-4 text-emerald-400" /> 2. Activités & Prestations incluses
-                </>
-              ) : (
-                <>
-                  <Music className="w-4 h-4 text-pink-500" /> 2. Gestion de la Line-up DJs
-                </>
-              )}
-            </h3>
-
-            {/* Add DJ Form */}
-            <form onSubmit={handleAddDj} className="p-4 bg-zinc-950 border border-zinc-800 rounded-2xl space-y-3 text-xs text-zinc-400">
-              <div>
-                <label className="block font-semibold mb-1 text-zinc-300">
-                  {event.category === 'trip' ? "Nom de la prestation ou de l'activité" : "Nom de scène du DJ"}
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder={event.category === 'trip' ? "Ex: Cottage VIP Premium 4 pers." : "DJ Snake"}
-                  value={djForm.name}
-                  onChange={(e) => setDjForm({ ...djForm, name: e.target.value })}
-                  className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold mb-1 text-zinc-300">URL Photo (facultatif)</label>
-                  <input
-                    type="url"
-                    placeholder="https://..."
-                    value={djForm.photo_url}
-                    onChange={(e) => setDjForm({ ...djForm, photo_url: e.target.value })}
-                    className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold mb-1 text-zinc-300">
-                    {event.category === 'trip' ? "Lien d'information (facultatif)" : "Lien Instagram (facultatif)"}
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://..."
-                    value={djForm.instagram_url}
-                    onChange={(e) => setDjForm({ ...djForm, instagram_url: e.target.value })}
-                    className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
-                  />
-                </div>
-              </div>
-              <button
-                type="submit"
-                className="w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs"
-              >
-                <Plus className="w-3.5 h-3.5" /> {event.category === 'trip' ? "Ajouter la prestation" : "Ajouter à la Line-up"}
-              </button>
-            </form>
-
-            {/* DJs list */}
-            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-              {djs.length === 0 ? (
-                <p className="text-zinc-500 text-center py-6 text-xs font-medium">
-                  {event.category === 'trip' ? "Aucune prestation configurée." : "Aucun DJ configuré."}
-                </p>
-              ) : (
-                djs.map((dj) => (
-                  <div key={dj.id} className="p-3 bg-zinc-950 border border-zinc-850 rounded-xl flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-3">
-                      {dj.photo_url ? (
-                        <img
-                          src={dj.photo_url}
-                          alt={dj.name}
-                          className="w-8 h-8 rounded-full object-cover border border-zinc-800"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-pink-500/10 text-pink-400 font-bold flex items-center justify-center">
-                          {dj.name.slice(0, 2).toUpperCase()}
-                        </div>
-                      )}
-                      <span className="font-extrabold text-white">{dj.name}</span>
-                    </div>
-
-                    <button
-                      onClick={() => handleDeleteDj(dj.id)}
-                      className="p-1.5 text-red-400 hover:bg-red-500/15 rounded-lg transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))
-              )}
+            <div className="border-b border-zinc-800 pb-3">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <Plane className="w-4 h-4 text-emerald-400" /> 2. Formules & Hébergements (Packs, Cottages, Chambres)
+              </h3>
+              <p className="text-xs text-zinc-400 mt-1">
+                Configurez les options de logement disponibles pour ce séjour (cottage, villa, chambre, pack VIP...), leur tarif total et le nombre de personnes incluses.
+              </p>
             </div>
-          </div>
 
-          {/* TICKET TIERS COLUMN */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-6">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-800 pb-3 flex items-center gap-2">
-              <Ticket className="w-4 h-4 text-pink-500" /> 3. Tarifs de Billetterie (Vagues de prix)
-            </h3>
-
-            {/* Add Tier Form */}
-            <form onSubmit={handleAddTier} className="p-4 bg-zinc-950 border border-zinc-800 rounded-2xl space-y-3 text-xs text-zinc-400">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Formulaire ajout/modification formule voyage */}
+            <form onSubmit={handleAddTier} className="p-5 bg-zinc-950 border border-zinc-800 rounded-2xl space-y-4 text-xs text-zinc-400">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block font-semibold mb-1 text-zinc-300">Libellé du tarif</label>
+                  <label className="block font-semibold mb-1 text-zinc-300">Nom de la formule / Hébergement</label>
                   <input
                     type="text"
                     required
-                    placeholder="Ex: Vague 1 - Early Bird"
+                    placeholder="Ex: Cottage VIP 4 personnes, Pack Solo..."
                     value={tierForm.label}
                     onChange={(e) => setTierForm({ ...tierForm, label: e.target.value })}
-                    className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1 text-zinc-300">Prix (€)</label>
+                  <label className="block font-semibold mb-1 text-zinc-300">Prix total du séjour (€)</label>
                   <input
                     type="number"
                     required
                     min="0"
                     step="0.01"
-                    placeholder="20.00"
+                    placeholder="Ex: 850.00"
                     value={tierForm.price}
                     onChange={(e) => setTierForm({ ...tierForm, price: e.target.value })}
-                    className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
                   />
                 </div>
               </div>
+
               <div>
-                <label className="block font-semibold mb-1 text-zinc-300">Description</label>
+                <label className="block font-semibold mb-1 text-zinc-300">Description des prestations incluses</label>
                 <input
                   type="text"
-                  placeholder="Ex: Entrée seule valable avant 23h"
+                  placeholder="Ex: 3 nuits, accès domaine aquatique, draps et ménage inclus..."
                   value={tierForm.description}
                   onChange={(e) => setTierForm({ ...tierForm, description: e.target.value })}
-                  className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
+                  className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>
-              {event.category === 'trip' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
-                  <div>
-                    <label className="block font-semibold mb-1 text-zinc-300">Capacité du tarif (nombre d'accompagnants)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="Ex: 6 (pour un cottage de 6 personnes)"
-                      value={tierForm.capacity}
-                      onChange={(e) => setTierForm({ ...tierForm, capacity: e.target.value })}
-                      className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block font-semibold mb-1 text-zinc-300">Stock disponible (cottages/unités)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      placeholder="Ex: 5"
-                      value={tierForm.stock_quantity}
-                      onChange={(e) => setTierForm({ ...tierForm, stock_quantity: e.target.value })}
-                      className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
-                    />
-                    <p className="text-[9px] text-zinc-500 mt-1">Laissez vide si vous n'avez pas encore de limite fixée.</p>
-                  </div>
-                </div>
-              )}
-              {/* Note: SumUp and PayPal links are now automated via the global PayPal integration */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block font-semibold mb-1 text-zinc-300">Capacité (places)</label>
+                  <label className="block font-semibold mb-1 text-zinc-300">Capacité (personnes par formule)</label>
                   <input
                     type="number"
-                    required
                     min="1"
-                    placeholder="100"
-                    value={tierForm.max_capacity}
-                    onChange={(e) => setTierForm({ ...tierForm, max_capacity: e.target.value })}
-                    className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
+                    placeholder="Ex: 4"
+                    value={tierForm.capacity}
+                    onChange={(e) => setTierForm({ ...tierForm, capacity: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
                   />
+                  <p className="text-[10px] text-zinc-500 mt-1">Nombre d'inscrits prévus pour cette formule.</p>
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1 text-zinc-300">Ordre d'affichage</label>
+                  <label className="block font-semibold mb-1 text-zinc-300">Stock disponible (unités / cottages)</label>
                   <input
                     type="number"
-                    value={tierForm.display_order}
-                    onChange={(e) => setTierForm({ ...tierForm, display_order: e.target.value })}
-                    className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
+                    min="1"
+                    placeholder="Ex: 5"
+                    value={tierForm.stock_quantity}
+                    onChange={(e) => setTierForm({ ...tierForm, stock_quantity: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
                   />
+                  <p className="text-[10px] text-zinc-500 mt-1">Laissez vide si pas de limite fixée.</p>
                 </div>
                 <div className="flex items-center pt-5">
                   <input
                     type="checkbox"
-                    id="is_active"
+                    id="is_active_trip"
                     checked={tierForm.is_active}
                     onChange={(e) => setTierForm({ ...tierForm, is_active: e.target.checked })}
-                    className="w-4 h-4 rounded bg-zinc-900 border-zinc-800 text-purple-600 focus:ring-0 focus:ring-offset-0 mr-2 cursor-pointer"
+                    className="w-4 h-4 rounded bg-zinc-900 border-zinc-800 text-emerald-600 focus:ring-0 focus:ring-offset-0 mr-2 cursor-pointer"
                   />
-                  <label htmlFor="is_active" className="font-semibold cursor-pointer text-zinc-300">Activer ce tarif</label>
+                  <label htmlFor="is_active_trip" className="font-semibold cursor-pointer text-zinc-300">Activer cette formule en ligne</label>
                 </div>
               </div>
+
               {editingTierId ? (
                 <div className="flex gap-2">
                   <button
                     type="submit"
-                    className="flex-1 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs shadow-md"
+                    className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 text-xs shadow-md cursor-pointer"
                   >
-                    <Save className="w-3.5 h-3.5" /> Modifier le Tarif
+                    <Save className="w-3.5 h-3.5" /> Enregistrer les modifications
                   </button>
                   <button
                     type="button"
                     onClick={handleCancelEditTier}
-                    className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white font-bold rounded-lg transition-colors text-xs"
+                    className="px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white font-bold rounded-xl transition-colors text-xs cursor-pointer"
                   >
                     Annuler
                   </button>
@@ -1287,64 +1180,72 @@ export default function EditEventPage({ params }: PageProps) {
               ) : (
                 <button
                   type="submit"
-                  className="w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs"
+                  className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-1.5 text-xs cursor-pointer"
                 >
-                  <Plus className="w-3.5 h-3.5" /> Ajouter la Catégorie
+                  <Plus className="w-3.5 h-3.5" /> Ajouter cette formule
                 </button>
               )}
             </form>
 
-            {/* Ticket tiers list */}
-            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+            {/* Liste des formules voyage */}
+            <div className="space-y-3">
               {ticketTiers.length === 0 ? (
-                <p className="text-zinc-500 text-center py-6 text-xs font-medium">Aucun tarif configuré.</p>
+                <p className="text-zinc-500 text-center py-6 text-xs font-medium border border-dashed border-zinc-800 rounded-xl">
+                  Aucune formule ou hébergement configuré.
+                </p>
               ) : (
                 ticketTiers.map((tier) => (
-                  <div key={tier.id} className="p-3 bg-zinc-950 border border-zinc-850 rounded-xl flex items-center justify-between text-xs">
-                    <div className="space-y-0.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-white">{tier.label}</span>
-                        <span className="font-bold text-emerald-400">{tier.price.toFixed(2)} €</span>
+                  <div key={tier.id} className="p-4 bg-zinc-950 border border-zinc-850 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-3">
+                        <span className="font-extrabold text-white text-sm">{tier.label}</span>
+                        <span className="font-bold text-emerald-400 text-sm">{tier.price.toFixed(2)} €</span>
                       </div>
-                      <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-semibold mt-1">
-                        <span>Capacité : <b>{tier.max_capacity ?? 100}</b> places</span>
-                        {event.category === 'trip' && tier.capacity && (
-                          <span className="text-zinc-500">• Groupe : <b>{tier.capacity}</b> pers.</span>
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-zinc-400 font-medium">
+                        {tier.capacity && (
+                          <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300">
+                            👥 <b>{tier.capacity}</b> personne{tier.capacity > 1 ? 's' : ''}
+                          </span>
                         )}
-                        {event.category === 'trip' && tier.stock_quantity !== null && tier.stock_quantity !== undefined && (
-                          <span className={`${getReservedCountForTier(tier.id, tier.label) >= tier.stock_quantity ? 'text-red-400 font-extrabold animate-pulse' : 'text-purple-400'} ml-1`}>
-                            • Stock : <b>{getReservedCountForTier(tier.id, tier.label)} / {tier.stock_quantity}</b> {getReservedCountForTier(tier.id, tier.label) >= tier.stock_quantity ? 'COMPLET' : 'réservés'}
+                        {tier.stock_quantity !== null && tier.stock_quantity !== undefined && (
+                          <span className={`px-2 py-0.5 rounded border ${
+                            getReservedCountForTier(tier.id, tier.label) >= tier.stock_quantity 
+                              ? 'bg-red-500/10 border-red-500/20 text-red-400 font-extrabold' 
+                              : 'bg-purple-500/10 border-purple-500/20 text-purple-300'
+                          }`}>
+                            📦 Stock : <b>{getReservedCountForTier(tier.id, tier.label)} / {tier.stock_quantity}</b> {getReservedCountForTier(tier.id, tier.label) >= tier.stock_quantity ? 'COMPLET' : 'réservés'}
                           </span>
                         )}
                       </div>
-                      {/* Payment tags removed since PayPal is integrated globally */}
                       {tier.description && (
-                        <p className="text-[10px] text-zinc-500 mt-0.5">{tier.description}</p>
+                        <p className="text-[11px] text-zinc-400">{tier.description}</p>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 self-end sm:self-auto">
                       <button
                         onClick={() => handleToggleTierActive(tier.id, tier.is_active)}
-                        className={`px-3 py-1 rounded-lg font-bold text-[10px] uppercase border transition-colors ${
+                        className={`px-3 py-1.5 rounded-xl font-bold text-[10px] uppercase border transition-colors cursor-pointer ${
                           tier.is_active 
                             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' 
                             : 'bg-zinc-800 text-zinc-500 border-zinc-750 hover:bg-zinc-700'
                         }`}
                       >
-                        {tier.is_active ? '🟢 En vente' : '🔴 Épuisé'}
+                        {tier.is_active ? '🟢 Disponible' : '🔴 Suspendu'}
                       </button>
                       <button
                         type="button"
                         onClick={() => handleEditTierClick(tier)}
-                        className="p-1.5 text-zinc-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors"
+                        className="p-2 text-zinc-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-xl transition-colors cursor-pointer"
+                        title="Modifier la formule"
                       >
                         <Pencil className="w-4 h-4" />
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDeleteTier(tier.id)}
-                        className="p-1.5 text-red-400 hover:bg-red-500/15 rounded-lg transition-colors"
+                        className="p-2 text-red-400 hover:bg-red-500/15 rounded-xl transition-colors cursor-pointer"
+                        title="Supprimer la formule"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -1354,17 +1255,265 @@ export default function EditEventPage({ params }: PageProps) {
               )}
             </div>
           </div>
+        ) : (
+          /* SOIRÉES: GRILLE 2 COLONNES LINE-UP DJS & BILLETS */
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            {/* DJs COLUMN */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-6">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-800 pb-3 flex items-center gap-2">
+                <Music className="w-4 h-4 text-pink-500" /> 2. Gestion de la Line-up DJs
+              </h3>
 
-        </div>
+              {/* Add DJ Form */}
+              <form onSubmit={handleAddDj} className="p-4 bg-zinc-950 border border-zinc-800 rounded-2xl space-y-3 text-xs text-zinc-400">
+                <div>
+                  <label className="block font-semibold mb-1 text-zinc-300">
+                    Nom de scène du DJ
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="DJ Snake"
+                    value={djForm.name}
+                    onChange={(e) => setDjForm({ ...djForm, name: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1 text-zinc-300">URL Photo (facultatif)</label>
+                    <input
+                      type="url"
+                      placeholder="https://..."
+                      value={djForm.photo_url}
+                      onChange={(e) => setDjForm({ ...djForm, photo_url: e.target.value })}
+                      className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-zinc-300">
+                      Lien Instagram (facultatif)
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://..."
+                      value={djForm.instagram_url}
+                      onChange={(e) => setDjForm({ ...djForm, instagram_url: e.target.value })}
+                      className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  className="w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Ajouter à la Line-up
+                </button>
+              </form>
 
-        {/* 4. BUYERS TABLE (VERIFICATION) */}
+              {/* DJs list */}
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                {djs.length === 0 ? (
+                  <p className="text-zinc-500 text-center py-6 text-xs font-medium">
+                    Aucun DJ configuré.
+                  </p>
+                ) : (
+                  djs.map((dj) => (
+                    <div key={dj.id} className="p-3 bg-zinc-950 border border-zinc-850 rounded-xl flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-3">
+                        {dj.photo_url ? (
+                          <img
+                            src={dj.photo_url}
+                            alt={dj.name}
+                            className="w-8 h-8 rounded-full object-cover border border-zinc-800"
+                          />
+                        ) : (
+                          <div className="w-8 h-8 rounded-full bg-pink-500/10 text-pink-400 font-bold flex items-center justify-center">
+                            {dj.name.slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <span className="font-extrabold text-white">{dj.name}</span>
+                      </div>
+
+                      <button
+                        onClick={() => handleDeleteDj(dj.id)}
+                        className="p-1.5 text-red-400 hover:bg-red-500/15 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* TICKET TIERS COLUMN */}
+            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-6">
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider border-b border-zinc-800 pb-3 flex items-center gap-2">
+                <Ticket className="w-4 h-4 text-pink-500" /> 3. Tarifs de Billetterie (Vagues de prix)
+              </h3>
+
+              {/* Add Tier Form */}
+              <form onSubmit={handleAddTier} className="p-4 bg-zinc-950 border border-zinc-800 rounded-2xl space-y-3 text-xs text-zinc-400">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1 text-zinc-300">Libellé du tarif</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ex: Vague 1 - Early Bird"
+                      value={tierForm.label}
+                      onChange={(e) => setTierForm({ ...tierForm, label: e.target.value })}
+                      className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-zinc-300">Prix (€)</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="0.01"
+                      placeholder="20.00"
+                      value={tierForm.price}
+                      onChange={(e) => setTierForm({ ...tierForm, price: e.target.value })}
+                      className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-zinc-300">Description</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Entrée seule valable avant 23h"
+                    value={tierForm.description}
+                    onChange={(e) => setTierForm({ ...tierForm, description: e.target.value })}
+                    className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-semibold mb-1 text-zinc-300">Capacité (places)</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      placeholder="100"
+                      value={tierForm.max_capacity}
+                      onChange={(e) => setTierForm({ ...tierForm, max_capacity: e.target.value })}
+                      className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold mb-1 text-zinc-300">Ordre d'affichage</label>
+                    <input
+                      type="number"
+                      value={tierForm.display_order}
+                      onChange={(e) => setTierForm({ ...tierForm, display_order: e.target.value })}
+                      className="w-full bg-zinc-900 border border-zinc-850 rounded-lg px-3 py-2 text-white focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex items-center pt-5">
+                    <input
+                      type="checkbox"
+                      id="is_active"
+                      checked={tierForm.is_active}
+                      onChange={(e) => setTierForm({ ...tierForm, is_active: e.target.checked })}
+                      className="w-4 h-4 rounded bg-zinc-900 border-zinc-800 text-purple-600 focus:ring-0 focus:ring-offset-0 mr-2 cursor-pointer"
+                    />
+                    <label htmlFor="is_active" className="font-semibold cursor-pointer text-zinc-300">Activer ce tarif</label>
+                  </div>
+                </div>
+                {editingTierId ? (
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      className="flex-1 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs shadow-md cursor-pointer"
+                    >
+                      <Save className="w-3.5 h-3.5" /> Modifier le Tarif
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelEditTier}
+                      className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white font-bold rounded-lg transition-colors text-xs cursor-pointer"
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="submit"
+                    className="w-full py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 text-xs cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Ajouter la Catégorie
+                  </button>
+                )}
+              </form>
+
+              {/* Ticket tiers list */}
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                {ticketTiers.length === 0 ? (
+                  <p className="text-zinc-500 text-center py-6 text-xs font-medium">Aucun tarif configuré.</p>
+                ) : (
+                  ticketTiers.map((tier) => (
+                    <div key={tier.id} className="p-3 bg-zinc-950 border border-zinc-850 rounded-xl flex items-center justify-between text-xs">
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-white">{tier.label}</span>
+                          <span className="font-bold text-emerald-400">{tier.price.toFixed(2)} €</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-semibold mt-1">
+                          <span>Capacité : <b>{tier.max_capacity ?? 100}</b> places</span>
+                        </div>
+                        {tier.description && (
+                          <p className="text-[10px] text-zinc-500 mt-0.5">{tier.description}</p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleToggleTierActive(tier.id, tier.is_active)}
+                          className={`px-3 py-1 rounded-lg font-bold text-[10px] uppercase border transition-colors cursor-pointer ${
+                            tier.is_active 
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' 
+                              : 'bg-zinc-800 text-zinc-500 border-zinc-750 hover:bg-zinc-700'
+                          }`}
+                        >
+                          {tier.is_active ? '🟢 En vente' : '🔴 Épuisé'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleEditTierClick(tier)}
+                          className="p-1.5 text-zinc-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTier(tier.id)}
+                          className="p-1.5 text-red-400 hover:bg-red-500/15 rounded-lg transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* BUYERS TABLE */}
         <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-zinc-800 gap-4">
             <div>
               <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 {event.category === 'trip' ? (
                   <>
-                    <Plane className="w-4 h-4 text-orange-400" /> 4. Liste des Voyageurs & Suivi des Règlements
+                    <Plane className="w-4 h-4 text-orange-400" /> 3. Liste des Voyageurs & Suivi des Règlements
                   </>
                 ) : (
                   <>
@@ -1689,9 +1838,19 @@ export default function EditEventPage({ params }: PageProps) {
                     onChange={(e: any) => setBuyerAddForm({ ...buyerAddForm, status: e.target.value })}
                     className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500 cursor-pointer font-semibold"
                   >
-                    <option value="verified" className="text-emerald-400">✅ Payé / Validé (reçu en direct)</option>
-                    <option value="pending" className="text-amber-400">⏳ En attente de paiement</option>
-                    <option value="added_close_friends" className="text-pink-400">⭐️ Amis Proches / Invité VIP</option>
+                    {event.category === 'trip' ? (
+                      <>
+                        <option value="verified" className="text-emerald-400">✅ 100% Soldé / Payé</option>
+                        <option value="pending" className="text-amber-400">⏳ Acompte versé / En cours</option>
+                        <option value="added_close_friends" className="text-pink-400">⭐️ VIP / Staff Voyage</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="verified" className="text-emerald-400">✅ Payé / Validé (reçu en direct)</option>
+                        <option value="pending" className="text-amber-400">⏳ En attente de paiement</option>
+                        <option value="added_close_friends" className="text-pink-400">⭐️ Amis Proches / Invité VIP</option>
+                      </>
+                    )}
                   </select>
                 </div>
 
@@ -1702,17 +1861,17 @@ export default function EditEventPage({ params }: PageProps) {
                   </label>
                   <input
                     type="text"
-                    placeholder="Ex: Payé 20€ espèces à Alex, Lydia, etc."
+                    placeholder={event.category === 'trip' ? "Ex: Acompte 300€ virement reçu, chèque vacances..." : "Ex: Payé 20€ espèces à Alex, Lydia, etc."}
                     value={buyerAddForm.notes}
                     onChange={(e) => setBuyerAddForm({ ...buyerAddForm, notes: e.target.value })}
                     className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-purple-500"
                   />
                 </div>
 
-                {/* Code Unique personnalisé (optionnel) */}
+                {/* Code Unique / Réf. Dossier personnalisé (optionnel) */}
                 <div>
                   <label className="block font-semibold mb-1 text-zinc-300">
-                    Code Unique (laisser vide = automatique)
+                    {event.category === 'trip' ? "Réf. Dossier Unique (vide = auto)" : "Code Unique (vide = auto)"}
                   </label>
                   <input
                     type="text"

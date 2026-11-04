@@ -258,12 +258,14 @@ export default function EventDetailsPage({ params }: PageProps) {
 
     try {
       const partsToSend = getPartsToSend();
+      const effectiveQuantity = event.category === 'trip' ? (selectedTier.capacity || 1) : ticketCount;
+      const effectivePrice = event.category === 'trip' ? selectedTier.price : (ticketCount * selectedTier.price);
 
       const result = await registerBuyer(
         event.id, 
         buyerName.trim(), 
         selectedTier.label, 
-        ticketCount, 
+        effectiveQuantity, 
         'verified',
         selectedTier.id,
         partsToSend
@@ -277,7 +279,7 @@ export default function EventDetailsPage({ params }: PageProps) {
         setTicketCount(1);
         setParticipants([]);
         // Redirect to success page
-        router.push(`/evenements/${event.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(savedLabel)}&quantity=${ticketCount}`);
+        router.push(`/evenements/${event.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(savedLabel)}&quantity=${effectiveQuantity}`);
       } else {
         setRegistrationError(result.error || "Une erreur s'est produite lors de l'enregistrement.");
       }
@@ -303,12 +305,14 @@ export default function EventDetailsPage({ params }: PageProps) {
 
     try {
       const partsToSend = getPartsToSend();
+      const effectiveQuantity = event.category === 'trip' ? (selectedTier.capacity || 1) : ticketCount;
+      const effectivePrice = event.category === 'trip' ? selectedTier.price : (ticketCount * selectedTier.price);
 
       const result = await registerBuyer(
         event.id, 
         buyerName.trim(), 
         selectedTier.label, 
-        ticketCount, 
+        effectiveQuantity, 
         'pending',
         selectedTier.id,
         partsToSend
@@ -318,7 +322,7 @@ export default function EventDetailsPage({ params }: PageProps) {
         setWireSuccessData({
           code: result.confirmationCode,
           tierLabel: selectedTier.label,
-          price: ticketCount * selectedTier.price,
+          price: effectivePrice,
           leader: buyerName.trim(),
           participants: partsToSend || []
         });
@@ -481,8 +485,8 @@ export default function EventDetailsPage({ params }: PageProps) {
         {/* Left pane: Lineup & Infos */}
         <div className="lg:col-span-2 space-y-8">
           
-          {/* Line-up DJs */}
-          {djs.length > 0 && (
+          {/* Line-up DJs (Soirées uniquement) */}
+          {event.category !== 'trip' && djs.length > 0 && (
             <div className="glass p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/5 space-y-6">
               <h3 className="text-lg font-black uppercase tracking-wider text-white border-b border-white/5 pb-3">
                 🎧 Line-up
@@ -708,13 +712,9 @@ export default function EventDetailsPage({ params }: PageProps) {
           <div className="glass p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-white/5 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-3">
               <h3 className="text-lg font-black uppercase tracking-wider text-white flex items-center gap-1.5">
-                {event.slug.includes('center-parcs') ? (
+                {event.category === 'trip' ? (
                   <>
-                    <span className="text-emerald-400">🏠</span> Hébergements
-                  </>
-                ) : event.category === 'trip' ? (
-                  <>
-                    <span className="text-emerald-400">✈️</span> Formules
+                    <span className="text-emerald-400">✈️</span> Formules & Hébergements
                   </>
                 ) : (
                   <>
@@ -723,13 +723,15 @@ export default function EventDetailsPage({ params }: PageProps) {
                 )}
               </h3>
               <span className="px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[10px] uppercase font-bold tracking-widest animate-pulse">
-                {event.slug.includes('center-parcs') ? 'Cottages limités' : 'Places limitées'}
+                {event.category === 'trip' ? 'Hébergements limités' : 'Places limitées'}
               </span>
             </div>
 
             {ticketTiers.length === 0 ? (
-              <p className="text-white/40 text-center py-6 text-xs">Aucun billet en vente pour le moment.</p>
-            ) : event.slug.includes('center-parcs') ? (
+              <p className="text-white/40 text-center py-6 text-xs">
+                {event.category === 'trip' ? "Aucun hébergement ou formule disponible pour le moment." : "Aucun billet en vente pour le moment."}
+              </p>
+            ) : event.category === 'trip' ? (
               <div className="grid grid-cols-1 gap-4">
                 {ticketTiers.map((tier) => {
                   const remaining = getRemainingTicketsForTier(tier);
@@ -750,14 +752,14 @@ export default function EventDetailsPage({ params }: PageProps) {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-bold text-lg">
-                            🏠
+                            🏡
                           </div>
                           <div className="text-left">
                             <span className="font-extrabold text-white text-sm uppercase tracking-wide group-hover:text-emerald-400 transition-colors block">
                               {tier.label}
                             </span>
                             <span className="text-[10px] text-zinc-400 font-semibold block">
-                              Cottage tout équipé • {tier.capacity || 4} personnes
+                              {tier.capacity ? `Hébergement • ${tier.capacity} personne${tier.capacity > 1 ? 's' : ''}` : 'Formule séjour'}
                             </span>
                           </div>
                         </div>
@@ -766,10 +768,16 @@ export default function EventDetailsPage({ params }: PageProps) {
                             {tier.price.toFixed(2)} €
                           </span>
                           <span className="text-[9px] text-white/30 font-bold uppercase tracking-wider block">
-                            par hébergement
+                            par formule
                           </span>
                         </div>
                       </div>
+
+                      {tier.description && (
+                        <p className="text-[11px] text-white/60 leading-relaxed bg-white/[0.02] p-2.5 rounded-xl border border-white/5">
+                          {tier.description}
+                        </p>
+                      )}
 
                       <div className="flex justify-between items-center border-t border-white/5 pt-3">
                         {isSoldOut ? (
@@ -778,11 +786,11 @@ export default function EventDetailsPage({ params }: PageProps) {
                           </span>
                         ) : remaining <= 3 ? (
                           <span className="text-[10px] text-amber-500 font-bold uppercase tracking-wider animate-pulse">
-                            ⚠️ Plus que {remaining} cottage{remaining > 1 ? 's' : ''} !
+                            ⚠️ Plus que {remaining} disponible{remaining > 1 ? 's' : ''} !
                           </span>
                         ) : (
                           <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">
-                            🟢 {remaining} cottage{remaining > 1 ? 's' : ''} disponible{remaining > 1 ? 's' : ''}
+                            🟢 {remaining} disponible{remaining > 1 ? 's' : ''}
                           </span>
                         )}
 
@@ -791,7 +799,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                             ? 'text-red-400 font-extrabold' 
                             : selectedTier?.id === tier.id ? 'text-emerald-400' : 'text-zinc-500 group-hover:text-white'
                         }`}>
-                          {isSoldOut ? 'Complet' : selectedTier?.id === tier.id ? 'Sélectionné ✓' : 'Choisir ce cottage →'}
+                          {isSoldOut ? 'Complet' : selectedTier?.id === tier.id ? 'Sélectionné ✓' : 'Choisir cette formule →'}
                         </span>
                       </div>
                     </div>
@@ -994,11 +1002,11 @@ export default function EventDetailsPage({ params }: PageProps) {
                     Réservation
                   </span>
                   <h3 className="text-xl font-black text-white uppercase mt-2">
-                    {event?.slug.includes('center-parcs') ? "Réservation du cottage" : "Qui réserve ce billet ?"}
+                    {event?.category === 'trip' ? "Réservation de votre formule" : "Qui réserve ce billet ?"}
                   </h3>
                   <p className="text-xs text-white/40 mt-1">
-                    {event?.slug.includes('center-parcs') 
-                      ? `Saisissez les prénoms des occupants pour votre cottage : ${selectedTier.label}` 
+                    {event?.category === 'trip' 
+                      ? `Saisissez les informations des voyageurs pour : ${selectedTier.label}` 
                       : `Vous avez choisi le tarif ${selectedTier.label} (${selectedTier.price.toFixed(2)} €).`}
                   </p>
                   {selectedTier.description && (
@@ -1011,11 +1019,9 @@ export default function EventDetailsPage({ params }: PageProps) {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-white/60 uppercase tracking-widest mb-2">
-                      {event?.slug.includes('center-parcs') 
-                        ? "Responsable de la réservation (Prénom et Nom)" 
-                        : (event?.category === 'trip' 
-                            ? 'Responsable de la réservation (Prénom et Nom)' 
-                            : (ticketCount > 1 ? 'Prénom et Nom (Titulaire / Acheteur principal)' : 'Prénom et Nom'))}
+                      {event?.category === 'trip' 
+                        ? "Responsable du dossier de séjour (Prénom et Nom)" 
+                        : (ticketCount > 1 ? 'Prénom et Nom (Titulaire / Acheteur principal)' : 'Prénom et Nom')}
                     </label>
                     <input
                       type="text"
@@ -1027,8 +1033,8 @@ export default function EventDetailsPage({ params }: PageProps) {
                     />
                     <p className="text-[9px] text-white/40 mt-1.5 flex items-start gap-1">
                       <Info className="w-3.5 h-3.5 flex-shrink-0" />
-                      {event?.slug.includes('center-parcs') 
-                        ? "Ce nom sera utilisé pour l'enregistrement principal du cottage." 
+                      {event?.category === 'trip' 
+                        ? "Ce nom sera utilisé pour l'enregistrement officiel du dossier de voyage." 
                         : "Renseignez votre vrai prénom et nom officiel (contrôle de pièce d'identité à l'entrée)."}
                     </p>
                   </div>
@@ -1036,19 +1042,17 @@ export default function EventDetailsPage({ params }: PageProps) {
                   {event?.category === 'trip' && selectedTier && selectedTier.capacity && selectedTier.capacity > 1 && (
                     <div className="space-y-4 pt-4 border-t border-white/5 mt-4">
                       <span className="block text-xs font-bold text-emerald-400 uppercase tracking-widest">
-                        {event?.slug.includes('center-parcs')
-                          ? `Prénom et Nom des autres personnes occupant le cottage (${selectedTier.capacity - 1} pers.)`
-                          : `Prénom et Nom des autres participants (${selectedTier.capacity - 1} pers.)`}
+                        {`Prénom et Nom des autres voyageurs (${selectedTier.capacity - 1} pers.)`}
                       </span>
                       {participants.map((p, idx) => (
                         <div key={idx} className="space-y-1">
                           <label className="block text-[10px] font-bold text-white/50 uppercase tracking-wider">
-                            Occupant {idx + 2} - Prénom et Nom
+                            Voyageur {idx + 2} - Prénom et Nom
                           </label>
                           <input
                             type="text"
                             required
-                            placeholder={`Prénom et Nom complet de l'occupant ${idx + 2}`}
+                            placeholder={`Prénom et Nom complet du voyageur ${idx + 2}`}
                             value={p}
                             onChange={(e) => {
                               const newParts = [...participants];
@@ -1062,7 +1066,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                     </div>
                   )}
 
-                  {!event?.slug.includes('center-parcs') && (
+                  {event?.category !== 'trip' && (
                     <div>
                       <label className="block text-xs font-bold text-white/60 uppercase tracking-widest mb-2">
                         Nombre de Places
@@ -1182,14 +1186,17 @@ export default function EventDetailsPage({ params }: PageProps) {
                         <PayPalButtons
                           style={{ layout: "vertical", shape: "rect", label: "pay" }}
                           createOrder={(data, actions) => {
+                            const effectivePrice = event!.category === 'trip' ? selectedTier.price : (ticketCount * selectedTier.price);
                             return actions.order.create({
                               intent: "CAPTURE",
                               purchase_units: [{
                                 amount: {
                                   currency_code: "EUR",
-                                  value: (ticketCount * selectedTier.price).toString()
+                                  value: effectivePrice.toString()
                                 },
-                                description: `Billet ${selectedTier.label} - ${ticketCount} place(s) pour FMB Experience`
+                                description: event!.category === 'trip'
+                                  ? `Séjour ${event!.title} - ${selectedTier.label}`
+                                  : `Billet ${selectedTier.label} - ${ticketCount} place(s) pour FMB Experience`
                               }]
                             });
                           }}
@@ -1208,12 +1215,13 @@ export default function EventDetailsPage({ params }: PageProps) {
                             try {
                               const details = await actions.order.capture();
                               const partsToSend = getPartsToSend();
+                              const effectiveQuantity = event!.category === 'trip' ? (selectedTier.capacity || 1) : ticketCount;
 
                               const result = await registerBuyer(
                                 event!.id, 
                                 buyerName.trim(), 
                                 selectedTier.label, 
-                                ticketCount, 
+                                effectiveQuantity, 
                                 'verified',
                                 selectedTier.id,
                                 partsToSend
@@ -1224,7 +1232,7 @@ export default function EventDetailsPage({ params }: PageProps) {
                                 setBuyerName('');
                                 setTicketCount(1);
                                 setParticipants([]);
-                                router.push(`/evenements/${event!.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(savedLabel)}&quantity=${ticketCount}`);
+                                router.push(`/evenements/${event!.slug}/merci?code=${result.confirmationCode}&tier=${encodeURIComponent(savedLabel)}&quantity=${effectiveQuantity}`);
                               } else {
                                 setRegistrationError(result.error || "Paiement réussi mais échec de l'enregistrement. Contactez le support.");
                               }

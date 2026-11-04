@@ -336,42 +336,48 @@ export default function AdminDashboardPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-            <Link
-              href="/carte/qr"
-              target="_blank"
-              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-pink-950/40 hover:bg-pink-900/50 text-pink-300 border border-pink-800/50 font-bold text-xs uppercase tracking-wider transition-all active:scale-[0.98] shadow-md shadow-pink-950/20"
-            >
-              <Wine className="w-4 h-4 text-pink-400" />
-              <span>Carte Bar & QR</span>
-            </Link>
+            {activeTab === 'party' && (
+              <>
+                <Link
+                  href="/carte/qr"
+                  target="_blank"
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl bg-pink-950/40 hover:bg-pink-900/50 text-pink-300 border border-pink-800/50 font-bold text-xs uppercase tracking-wider transition-all active:scale-[0.98] shadow-md shadow-pink-950/20"
+                >
+                  <Wine className="w-4 h-4 text-pink-400" />
+                  <span>Carte Bar & QR</span>
+                </Link>
 
-            <button
-              onClick={() => setScannerOpen(!scannerOpen)}
-              className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all active:scale-[0.98] border ${
-                scannerOpen 
-                  ? 'bg-zinc-800 text-white border-zinc-700 shadow-[0_0_15px_rgba(147,51,234,0.1)]' 
-                  : 'bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border-zinc-800 hover:border-zinc-750'
-              }`}
-            >
-              <QrCode className="w-4 h-4 text-purple-400" />
-              {scannerOpen ? 'Fermer le Scanner' : 'Scanner un Billet'}
-            </button>
+                <button
+                  onClick={() => setScannerOpen(!scannerOpen)}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all active:scale-[0.98] border ${
+                    scannerOpen 
+                      ? 'bg-zinc-800 text-white border-zinc-700 shadow-[0_0_15px_rgba(147,51,234,0.1)]' 
+                      : 'bg-zinc-900 hover:bg-zinc-850 text-zinc-300 border-zinc-800 hover:border-zinc-750'
+                  }`}
+                >
+                  <QrCode className="w-4 h-4 text-purple-400" />
+                  {scannerOpen ? 'Fermer le Scanner' : 'Scanner un Billet'}
+                </button>
+              </>
+            )}
 
-            <button
-              onClick={() => handleCreateEvent('party')}
-              disabled={creating}
-              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs uppercase tracking-wider shadow-lg shadow-purple-600/15 transition-all active:scale-[0.98] disabled:opacity-50 flex-grow sm:flex-grow-0 justify-center"
-            >
-              <Plus className="w-4 h-4" /> {creating ? 'Création...' : 'Créer une Soirée'}
-            </button>
-
-            <button
-              onClick={() => handleCreateEvent('trip')}
-              disabled={creating}
-              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs uppercase tracking-wider shadow-lg shadow-emerald-600/15 transition-all active:scale-[0.98] disabled:opacity-50 flex-grow sm:flex-grow-0 justify-center"
-            >
-              <Plus className="w-4 h-4" /> {creating ? 'Création...' : 'Créer un Voyage'}
-            </button>
+            {activeTab === 'party' ? (
+              <button
+                onClick={() => handleCreateEvent('party')}
+                disabled={creating}
+                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs uppercase tracking-wider shadow-lg shadow-purple-600/15 transition-all active:scale-[0.98] disabled:opacity-50 flex-grow sm:flex-grow-0 justify-center"
+              >
+                <Plus className="w-4 h-4" /> {creating ? 'Création...' : 'Créer une Soirée'}
+              </button>
+            ) : (
+              <button
+                onClick={() => handleCreateEvent('trip')}
+                disabled={creating}
+                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs uppercase tracking-wider shadow-lg shadow-emerald-600/15 transition-all active:scale-[0.98] disabled:opacity-50 flex-grow sm:flex-grow-0 justify-center"
+              >
+                <Plus className="w-4 h-4" /> {creating ? 'Création...' : 'Créer un Voyage'}
+              </button>
+            )}
           </div>
         </div>
 
@@ -687,7 +693,8 @@ export default function AdminDashboardPage() {
                       <div className="flex items-center gap-2">
                         <MapPin className="w-3.5 h-3.5 text-zinc-500 flex-shrink-0" />
                         <span className="line-clamp-1">
-                          Lieu : <b>{event.secret_address || 'Non spécifié'}</b>
+                          {event.category === 'trip' ? 'Destination : ' : 'Lieu : '}
+                          <b>{(event.category === 'trip' ? event.address : event.secret_address) || 'Non spécifié'}</b>
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -710,8 +717,8 @@ export default function AdminDashboardPage() {
                   </Link>
                   <button
                     onClick={() => handleDeleteEvent(event.id)}
-                    className="py-2 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-xs transition-colors flex items-center justify-center"
-                    title="Supprimer la soirée"
+                    className="py-2 px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl text-xs transition-colors flex items-center justify-center cursor-pointer"
+                    title={event.category === 'trip' ? "Supprimer le voyage" : "Supprimer la soirée"}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
