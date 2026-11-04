@@ -58,6 +58,8 @@ export interface Buyer {
   checked_in_count: number;
   checked_in_at: string | null;
   email: string | null;
+  amount_paid?: number | null;
+  payment_due_date?: string | null;
   created_at: string;
 }
 

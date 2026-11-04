@@ -159,6 +159,8 @@ export async function adminAddBuyer(params: {
   notes?: string | null;
   additionalParticipants?: string[] | null;
   customCode?: string | null;
+  amountPaid?: number | null;
+  paymentDueDate?: string | null;
 }): Promise<{ success: boolean; buyer?: any; error?: string }> {
   try {
     const {
@@ -170,7 +172,9 @@ export async function adminAddBuyer(params: {
       status = 'verified',
       notes,
       additionalParticipants,
-      customCode
+      customCode,
+      amountPaid,
+      paymentDueDate
     } = params;
 
     if (!eventId || !nameOrPseudo?.trim()) {
@@ -197,12 +201,31 @@ export async function adminAddBuyer(params: {
     if (customCode && customCode.trim()) {
       insertData.confirmation_code = customCode.trim().toUpperCase();
     }
+    if (amountPaid !== undefined && amountPaid !== null) {
+      insertData.amount_paid = amountPaid;
+    }
+    if (paymentDueDate && paymentDueDate.trim()) {
+      insertData.payment_due_date = paymentDueDate.trim();
+    }
 
-    const { data, error } = await supabaseServer
+    let insertResult = await supabaseServer
       .from('buyers')
       .insert([insertData])
       .select('*')
       .single();
+
+    // Fallback si les colonnes amount_paid ou payment_due_date n'ont pas encore été créées dans la base
+    if (insertResult.error && (insertResult.error.message.includes('amount_paid') || insertResult.error.message.includes('payment_due_date'))) {
+      delete insertData.amount_paid;
+      delete insertData.payment_due_date;
+      insertResult = await supabaseServer
+        .from('buyers')
+        .insert([insertData])
+        .select('*')
+        .single();
+    }
+
+    const { data, error } = insertResult;
 
     if (error) {
       console.error('Erreur insertion buyer admin:', error);

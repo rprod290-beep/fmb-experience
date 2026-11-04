@@ -14,7 +14,9 @@ import {
   Calendar,
   MapPin,
   Clipboard,
-  AlertTriangle
+  AlertTriangle,
+  Plane,
+  Users
 } from 'lucide-react';
 
 interface PageProps {
@@ -174,10 +176,14 @@ export default function ThankYouPage({ params }: PageProps) {
 
             <div>
               <h2 className="text-2xl font-black uppercase text-white tracking-tight">
-                Accéder à mon Billet & Lieu Secret
+                {event.category === 'trip' ? "Accéder à mon Dossier Voyage" : "Accéder à mon Billet & Lieu Secret"}
               </h2>
               <p className="text-xs text-white/60 mt-2 leading-relaxed">
-                Entrez votre <b>Code Unique</b> de réservation pour afficher votre QR code d'entrée et dévoiler l'adresse secrète de la soirée <b>{event.title}</b>.
+                {event.category === 'trip' ? (
+                  <>Entrez votre <b>Référence Dossier</b> de réservation pour afficher le récapitulatif de votre séjour <b>{event.title}</b>.</>
+                ) : (
+                  <>Entrez votre <b>Code Unique</b> de réservation pour afficher votre QR code d'entrée et dévoiler l'adresse secrète de la soirée <b>{event.title}</b>.</>
+                )}
               </p>
             </div>
 
@@ -197,13 +203,13 @@ export default function ThankYouPage({ params }: PageProps) {
                 type="submit"
                 className="w-full py-4 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 hover:from-purple-500 hover:to-orange-400 text-white font-extrabold text-xs uppercase tracking-widest rounded-2xl shadow-lg transition-all active:scale-98 cursor-pointer"
               >
-                Déverrouiller mon billet & l'adresse
+                {event.category === 'trip' ? "Afficher mon dossier voyage" : "Déverrouiller mon billet & l'adresse"}
               </button>
             </form>
 
             <div className="pt-2">
               <Link href={`/evenements/${event.slug}`} className="text-xs text-white/40 hover:text-white transition-colors">
-                ← Retour à la page de la soirée
+                {event.category === 'trip' ? "← Retour à la page du voyage" : "← Retour à la page de la soirée"}
               </Link>
             </div>
           </div>
@@ -213,7 +219,9 @@ export default function ThankYouPage({ params }: PageProps) {
   }
 
   // Encodage du message WhatsApp
-  const whatsappMessage = `Bonjour, je viens d'acheter mon billet pour ${event.title}, voici ma preuve d'achat 👇 (Code: ${activeCode})`;
+  const whatsappMessage = event.category === 'trip'
+    ? `Bonjour, je viens de réserver pour le voyage ${event.title}, voici ma référence dossier 👇 (Réf: ${activeCode})`
+    : `Bonjour, je viens d'acheter mon billet pour ${event.title}, voici ma preuve d'achat 👇 (Code: ${activeCode})`;
   const encodedWhatsappMessage = encodeURIComponent(whatsappMessage);
   const whatsappUrl = `https://wa.me/${event.whatsapp_number}?text=${encodedWhatsappMessage}`;
 
@@ -226,7 +234,7 @@ export default function ThankYouPage({ params }: PageProps) {
             <ArrowLeft className="w-4 h-4 text-pink-500" /> Page de l'Événement
           </Link>
           <span className="font-extrabold text-xs tracking-wider text-purple-400 uppercase">
-            Billet Numérique
+            {event.category === 'trip' ? 'Dossier Voyage' : 'Billet Numérique'}
           </span>
         </div>
       </header>
@@ -242,13 +250,13 @@ export default function ThankYouPage({ params }: PageProps) {
 
           <div>
             <span className="text-[10px] font-bold text-orange-500 uppercase tracking-widest bg-orange-500/10 px-3 py-1 rounded-full border border-orange-500/20">
-              Réservation Enregistrée
+              {event.category === 'trip' ? 'Séjour Enregistré' : 'Réservation Enregistrée'}
             </span>
             <h2 className="text-3xl sm:text-4xl font-black uppercase text-white tracking-tight mt-4">
-              Votre Billet d'Accès
+              {event.category === 'trip' ? 'Confirmation de votre Séjour' : "Votre Billet d'Accès"}
             </h2>
             <p className="text-xs text-white/50 max-w-sm mx-auto mt-2 leading-relaxed">
-              {event.title} • {tier ? `Catégorie ${tier}` : 'Entrée Validée'} ({quantity} {quantity === 1 ? 'place' : 'places'})
+              {event.title} • {tier ? (event.category === 'trip' ? `Formule : ${tier}` : `Catégorie ${tier}`) : 'Réservation Confirmée'} ({quantity} {quantity === 1 ? (event.category === 'trip' ? 'voyageur' : 'place') : (event.category === 'trip' ? 'voyageurs' : 'places')})
             </p>
           </div>
 
@@ -260,7 +268,7 @@ export default function ThankYouPage({ params }: PageProps) {
                 rel="noopener noreferrer"
                 className="glow-btn-primary inline-flex items-center gap-2 px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest shadow-[0_0_25px_rgba(219,39,119,0.35)] transition-all duration-300 animate-pulse active:scale-[0.98]"
               >
-                💳 CLIQUER ICI POUR PAYER LE BILLET <ExternalLink className="w-3.5 h-3.5" />
+                💳 {event.category === 'trip' ? 'CLIQUER ICI POUR RÉGLER LA FORMULE' : 'CLIQUER ICI POUR PAYER LE BILLET'} <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
           )}
@@ -348,7 +356,7 @@ export default function ThankYouPage({ params }: PageProps) {
           {/* 2. CODE COMPONENT */}
           <div className="glass p-6 rounded-3xl border border-white/10 space-y-3 shadow-[0_0_30px_rgba(147,51,234,0.1)] relative group">
             <p className="text-[10px] font-bold text-purple-400 uppercase tracking-widest">
-              Votre Code de Confirmation Unique
+              {event.category === 'trip' ? "Votre Référence Dossier Voyage" : "Votre Code de Confirmation Unique"}
             </p>
             <div className="font-mono text-3xl sm:text-4xl font-black tracking-widest text-white uppercase select-all py-2 neon-text-purple">
               {activeCode}
@@ -366,34 +374,79 @@ export default function ThankYouPage({ params }: PageProps) {
               ) : (
                 <>
                   <Clipboard className="w-3.5 h-3.5" />
-                  Copier le code
+                  Copier la référence
                 </>
               )}
             </button>
           </div>
 
-          {/* 3. QR CODE CARD */}
-          <div className="glass p-6 rounded-3xl border border-white/10 space-y-4 shadow-[0_0_40px_rgba(219,39,119,0.05)]">
-            <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">
-              Votre QR Code d'Entrée
-            </p>
-            
-            <div className="bg-white p-3 rounded-2xl w-48 h-48 mx-auto flex items-center justify-center shadow-lg relative group">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
-                  typeof window !== 'undefined' 
-                    ? window.location.origin + '/admin/scan?code=' + activeCode 
-                    : 'https://fmb-experience.vercel.app/admin/scan?code=' + activeCode
-                )}`}
-                alt="QR Code de confirmation"
-                className="w-[180px] h-[180px]"
-              />
+          {/* 3. VOYAGE SUMMARY CARD OR PARTY QR CODE */}
+          {event.category === 'trip' ? (
+            <div className="glass p-6 sm:p-7 rounded-3xl border border-orange-500/30 space-y-5 shadow-[0_0_40px_rgba(249,115,22,0.12)] text-left">
+              <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                <div className="flex items-center gap-2 text-orange-400 font-extrabold text-xs uppercase tracking-wider">
+                  <Plane className="w-4 h-4 text-orange-500" />
+                  Fiche Récapitulative du Séjour
+                </div>
+                <span className="text-[10px] bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase">
+                  Dossier Enregistré
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 space-y-1">
+                  <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-wider block">Dates du Voyage</span>
+                  <p className="text-white font-bold flex items-center gap-2">
+                    <Calendar className="w-3.5 h-3.5 text-orange-400" />
+                    {new Date(event.event_date).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short', year: 'numeric' })}
+                    {event.end_date && (
+                      <>
+                        <span className="text-zinc-500">→</span>
+                        {new Date(event.end_date).toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'short', year: 'numeric' })}
+                      </>
+                    )}
+                  </p>
+                </div>
+
+                <div className="bg-white/[0.03] border border-white/5 rounded-2xl p-4 space-y-1">
+                  <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-wider block">Formule / Hébergement</span>
+                  <p className="text-orange-300 font-bold flex items-center gap-2">
+                    <Users className="w-3.5 h-3.5 text-orange-400" />
+                    {tier || 'Formule Séjour'} ({quantity} {quantity === 1 ? 'voyageur' : 'voyageurs'})
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-zinc-950/80 border border-zinc-800 rounded-2xl p-4 space-y-2 text-xs">
+                <p className="text-zinc-300 leading-relaxed">
+                  ℹ️ <b>Consignes importantes :</b> Votre place est bien enregistrée sous la référence <span className="font-mono font-bold text-orange-400">{activeCode}</span>. Vous n'avez <b>aucun QR code à présenter</b> pour ce voyage. L'équipe d'organisation prendra contact avec vous (ou vous pouvez échanger directement via WhatsApp ci-dessous) pour caler les formalités, règlements et points de rendez-vous.
+                </p>
+              </div>
             </div>
-            
-            <p className="text-[10px] text-white/40 max-w-xs mx-auto leading-relaxed">
-              Présentez ce QR Code à l'entrée de la soirée. L'équipe d'organisation le scannera pour valider votre entrée.
-            </p>
-          </div>
+          ) : (
+            /* 3. QR CODE CARD (SOIRÉES) */
+            <div className="glass p-6 rounded-3xl border border-white/10 space-y-4 shadow-[0_0_40px_rgba(219,39,119,0.05)]">
+              <p className="text-[10px] font-bold text-pink-400 uppercase tracking-widest">
+                Votre QR Code d'Entrée
+              </p>
+              
+              <div className="bg-white p-3 rounded-2xl w-48 h-48 mx-auto flex items-center justify-center shadow-lg relative group">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                    typeof window !== 'undefined' 
+                      ? window.location.origin + '/admin/scan?code=' + activeCode 
+                      : 'https://fmb-experience.vercel.app/admin/scan?code=' + activeCode
+                  )}`}
+                  alt="QR Code de confirmation"
+                  className="w-[180px] h-[180px]"
+                />
+              </div>
+              
+              <p className="text-[10px] text-white/40 max-w-xs mx-auto leading-relaxed">
+                Présentez ce QR Code à l'entrée de la soirée. L'équipe d'organisation le scannera pour valider votre entrée.
+              </p>
+            </div>
+          )}
 
           {/* Action buttons */}
           <div className="flex flex-col gap-4 items-center pt-2">
