@@ -70,8 +70,9 @@ export default function AdminDashboardPage() {
   }
 
   const handleLogout = async () => {
+    document.cookie = 'sb-access-token=; path=/; max-age=0; SameSite=Lax; Secure';
     await supabase.auth.signOut();
-    router.replace('/');
+    router.replace('/admin/login');
   };
 
   const handleCreateEvent = async (category: 'party' | 'trip') => {

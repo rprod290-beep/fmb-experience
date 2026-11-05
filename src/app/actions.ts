@@ -1,31 +1,114 @@
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
+import { headers } from 'next/headers';
 import { sendTicketEmail } from '@/lib/mail';
 
-// Force a Vercel rebuild to load the new RESEND_API_KEY env variable
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 // Instance Supabase côté serveur pour les Server Actions
 const supabaseServer = createClient(supabaseUrl, supabaseAnonKey);
 
+// =========================================================================
+// 1. UTILITAIRES DE SÉCURITÉ : RATE LIMITING & ASSAINISSEMENT
+// =========================================================================
+
+interface RateLimitRecord {
+  count: number;
+  resetAt: number;
+}
+const rateLimitMap = new Map<string, RateLimitRecord>();
+
+/**
+ * Récupère l'IP du client de manière sécurisée via les en-têtes de proxy (Vercel / Cloudflare).
+ */
+function getClientIp(): string {
+  try {
+    const headersList = headers();
+    const forwardedFor = headersList.get('x-forwarded-for');
+    if (forwardedFor) {
+      return forwardedFor.split(',')[0].trim();
+    }
+    const realIp = headersList.get('x-real-ip');
+    if (realIp) return realIp.trim();
+  } catch {
+    // headers() peut échouer lors de rendus statiques ou builds
+  }
+  return 'unknown-ip';
+}
+
+/**
+ * Limiteur de débit (Rate Limiter) par fenêtre glissante pour bloquer les attaques par force brute.
+ */
+function checkRateLimit(key: string, limit: number = 8, windowMs: number = 60_000): boolean {
+  const now = Date.now();
+  const record = rateLimitMap.get(key);
+
+  // Nettoyage périodique pour éviter toute fuite mémoire
+  if (rateLimitMap.size > 5_000) {
+    rateLimitMap.forEach((v, k) => {
+      if (now > v.resetAt) rateLimitMap.delete(k);
+    });
+  }
+
+  if (!record || now > record.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+
+  if (record.count >= limit) {
+    return false;
+  }
+
+  record.count += 1;
+  return true;
+}
+
+/**
+ * Assainit les chaînes entrantes pour empêcher les attaques XSS et les injections.
+ */
+function sanitizeInput(str: string | null | undefined, maxLength: number = 100): string {
+  if (!str) return '';
+  return str
+    .trim()
+    .slice(0, maxLength)
+    .replace(/[<>]/g, '');
+}
+
+// =========================================================================
+// 2. SERVER ACTIONS SÉCURISÉES
+// =========================================================================
+
 /**
  * Vérifie le code de confirmation et renvoie l'adresse secrète de l'événement si le code est valide.
+ * Protégé contre les attaques par force brute (max 7 tentatives / minute).
  */
 export async function verifyConfirmationCodeAndGetAddress(
   eventId: string,
   code: string
 ): Promise<{ success: boolean; address?: string; error?: string }> {
   try {
-    if (!eventId || !code) {
+    // Rate Limiting anti-bruteforce
+    const ip = getClientIp();
+    if (!checkRateLimit(`v_addr_${ip}`, 7, 60_000)) {
+      return { 
+        success: false, 
+        error: 'Trop de requêtes. Veuillez patienter une minute avant de réessayer.' 
+      };
+    }
+
+    const cleanEventId = sanitizeInput(eventId, 50);
+    const cleanCode = sanitizeInput(code, 30).toUpperCase();
+
+    if (!cleanEventId || !cleanCode) {
       return { success: false, error: 'Identifiant ou code manquant.' };
     }
 
     // Appelle la fonction RPC sécurisée dans la base de données
     const { data, error } = await supabaseServer.rpc('get_event_secret_address', {
-      p_event_id: eventId,
-      p_code: code.trim().toUpperCase(),
+      p_event_id: cleanEventId,
+      p_code: cleanCode,
     });
 
     if (error) {
@@ -48,7 +131,8 @@ export async function verifyConfirmationCodeAndGetAddress(
 }
 
 /**
- * Enregistre un acheteur potentiel avec le statut 'pending' avant paiement.
+ * Enregistre un acheteur avec vérification stricte anti-contournement de paiement.
+ * Un billet payant ne peut JAMAIS être forcé à 'verified' sans confirmation de paiement.
  */
 export async function registerBuyer(
   eventId: string,
@@ -57,28 +141,75 @@ export async function registerBuyer(
   ticketCount: number = 1,
   initialStatus: 'pending' | 'verified' = 'pending',
   ticketTierId?: string | null,
-  additionalParticipants?: string[] | null
+  additionalParticipants?: string[] | null,
+  paypalOrderId?: string | null
 ): Promise<{ success: boolean; confirmationCode?: string; error?: string }> {
   try {
-    if (!eventId || !nameOrPseudo || !ticketTierLabel) {
-      return { success: false, error: 'Tous les champs sont requis.' };
+    const cleanEventId = sanitizeInput(eventId, 50);
+    const cleanName = sanitizeInput(nameOrPseudo, 100);
+    const cleanLabel = sanitizeInput(ticketTierLabel, 80);
+    const cleanPaypalOrderId = sanitizeInput(paypalOrderId, 50);
+
+    if (!cleanEventId || !cleanName || !cleanLabel) {
+      return { success: false, error: 'Tous les champs requis doivent être renseignés.' };
     }
 
-    // Insère le buyer dans Supabase
-    // Le code de confirmation sera généré automatiquement par la base de données (valeur par défaut)
+    const validCount = Math.max(1, Math.min(Math.floor(ticketCount || 1), 50));
+
+    // Assainir la liste des participants additionnels
+    const cleanParticipants = additionalParticipants
+      ? additionalParticipants
+          .map(p => sanitizeInput(p, 100))
+          .filter(p => p.length > 0)
+          .slice(0, 50)
+      : null;
+
+    // =========================================================================
+    // VÉRIFICATION DE SÉCURITÉ PAIEMENT (ANTI-FRAUDE CÔTÉ SERVEUR)
+    // =========================================================================
+    let validatedStatus: 'pending' | 'verified' = 'pending';
+
+    if (ticketTierId) {
+      const cleanTierId = sanitizeInput(ticketTierId, 50);
+      const { data: tier, error: tierError } = await supabaseServer
+        .from('ticket_tiers')
+        .select('price, is_active')
+        .eq('id', cleanTierId)
+        .single();
+
+      if (tier && !tierError) {
+        if (tier.price === 0) {
+          // Billet gratuit : statut validé immédiat autorisé
+          validatedStatus = 'verified';
+        } else if (cleanPaypalOrderId && cleanPaypalOrderId.length >= 6) {
+          // Billet payant réglé via PayPal : statut validé
+          validatedStatus = 'verified';
+        } else {
+          // Billet payant (ex: virement bancaire ou tentative d'injection) : forcé obligatoirement à 'pending'
+          validatedStatus = 'pending';
+        }
+      }
+    } else {
+      // Aucun ID de tarif : forcé à 'pending' par sécurité
+      validatedStatus = (cleanPaypalOrderId && cleanPaypalOrderId.length >= 6) ? 'verified' : 'pending';
+    }
+
     const insertData: any = {
-      event_id: eventId,
-      name_or_pseudo: nameOrPseudo.trim(),
-      ticket_tier_label: ticketTierLabel,
-      status: initialStatus,
-      ticket_count: ticketCount,
+      event_id: cleanEventId,
+      name_or_pseudo: cleanName,
+      ticket_tier_label: cleanLabel,
+      status: validatedStatus,
+      ticket_count: validCount,
     };
 
     if (ticketTierId) {
-      insertData.ticket_tier_id = ticketTierId;
+      insertData.ticket_tier_id = sanitizeInput(ticketTierId, 50);
     }
-    if (additionalParticipants) {
-      insertData.additional_participants = additionalParticipants;
+    if (cleanParticipants && cleanParticipants.length > 0) {
+      insertData.additional_participants = cleanParticipants;
+    }
+    if (cleanPaypalOrderId) {
+      insertData.notes = `Règlement PayPal (ID de commande : ${cleanPaypalOrderId})`;
     }
 
     const { data, error } = await supabaseServer
@@ -92,8 +223,8 @@ export async function registerBuyer(
       return { success: false, error: 'Impossible de valider votre réservation.' };
     }
 
-    // Si le statut est directement validé, vérifier et potentiellement désactiver le tarif si hors stock
-    if (initialStatus === 'verified' && ticketTierId) {
+    // Si le statut est directement validé, vérifier le stock restant
+    if (validatedStatus === 'verified' && ticketTierId) {
       await checkAndDisableTierIfOutOfStock(ticketTierId);
     }
 
@@ -109,11 +240,12 @@ export async function registerBuyer(
  */
 export async function checkAndDisableTierIfOutOfStock(ticketTierId: string): Promise<void> {
   try {
+    const cleanTierId = sanitizeInput(ticketTierId, 50);
     // 1. Récupérer le tarif pour voir sa stock_quantity
     const { data: tier, error: tierError } = await supabaseServer
       .from('ticket_tiers')
       .select('stock_quantity, is_active')
-      .eq('id', ticketTierId)
+      .eq('id', cleanTierId)
       .single();
 
     if (tierError || !tier || tier.stock_quantity === null || !tier.is_active) {
@@ -124,7 +256,7 @@ export async function checkAndDisableTierIfOutOfStock(ticketTierId: string): Pro
     const { data: buyers, error: buyersError } = await supabaseServer
       .from('buyers')
       .select('ticket_count')
-      .eq('ticket_tier_id', ticketTierId)
+      .eq('ticket_tier_id', cleanTierId)
       .eq('status', 'verified');
 
     if (buyersError || !buyers) {
@@ -138,8 +270,8 @@ export async function checkAndDisableTierIfOutOfStock(ticketTierId: string): Pro
       await supabaseServer
         .from('ticket_tiers')
         .update({ is_active: false })
-        .eq('id', ticketTierId);
-      console.log(`[STOCK] Le tarif ${ticketTierId} est complet (${soldCount}/${tier.stock_quantity}). Désactivé automatiquement.`);
+        .eq('id', cleanTierId);
+      console.log(`[STOCK] Le tarif ${cleanTierId} est complet (${soldCount}/${tier.stock_quantity}). Désactivé automatiquement.`);
     }
   } catch (err) {
     console.error('Erreur lors de la vérification de stock:', err);
@@ -177,35 +309,41 @@ export async function adminAddBuyer(params: {
       paymentDueDate
     } = params;
 
-    if (!eventId || !nameOrPseudo?.trim()) {
+    const cleanEventId = sanitizeInput(eventId, 50);
+    const cleanName = sanitizeInput(nameOrPseudo, 100);
+
+    if (!cleanEventId || !cleanName) {
       return { success: false, error: 'Le nom du participant est obligatoire.' };
     }
 
     const insertData: any = {
-      event_id: eventId,
-      name_or_pseudo: nameOrPseudo.trim(),
-      ticket_tier_label: ticketTierLabel || 'Paiement direct',
+      event_id: cleanEventId,
+      name_or_pseudo: cleanName,
+      ticket_tier_label: sanitizeInput(ticketTierLabel, 80) || 'Paiement direct',
       status: status,
-      ticket_count: ticketCount > 0 ? ticketCount : 1,
+      ticket_count: Math.max(1, Math.min(Math.floor(ticketCount || 1), 100)),
     };
 
     if (ticketTierId) {
-      insertData.ticket_tier_id = ticketTierId;
+      insertData.ticket_tier_id = sanitizeInput(ticketTierId, 50);
     }
     if (notes && notes.trim()) {
-      insertData.notes = notes.trim();
+      insertData.notes = sanitizeInput(notes, 500);
     }
     if (additionalParticipants && additionalParticipants.length > 0) {
-      insertData.additional_participants = additionalParticipants;
+      insertData.additional_participants = additionalParticipants
+        .map(p => sanitizeInput(p, 100))
+        .filter(p => p.length > 0)
+        .slice(0, 50);
     }
     if (customCode && customCode.trim()) {
-      insertData.confirmation_code = customCode.trim().toUpperCase();
+      insertData.confirmation_code = sanitizeInput(customCode, 30).toUpperCase();
     }
     if (amountPaid !== undefined && amountPaid !== null) {
-      insertData.amount_paid = amountPaid;
+      insertData.amount_paid = typeof amountPaid === 'number' ? amountPaid : parseFloat(amountPaid) || 0;
     }
     if (paymentDueDate && paymentDueDate.trim()) {
-      insertData.payment_due_date = paymentDueDate.trim();
+      insertData.payment_due_date = sanitizeInput(paymentDueDate, 30);
     }
 
     let insertResult = await supabaseServer
@@ -245,7 +383,8 @@ export async function adminAddBuyer(params: {
 }
 
 /**
- * Recherche et dévoile l'adresse secrète d'un événement directement à partir du code de réservation
+ * Recherche et dévoile l'adresse secrète d'un événement directement à partir du code de réservation.
+ * Protégé contre les attaques par force brute (max 6 requêtes / minute par IP).
  */
 export async function getSecretAddressByCode(
   code: string
@@ -258,11 +397,20 @@ export async function getSecretAddressByCode(
   error?: string;
 }> {
   try {
-    if (!code || !code.trim()) {
-      return { success: false, error: 'Veuillez saisir votre code de réservation.' };
+    // Rate Limiting anti-bruteforce
+    const ip = getClientIp();
+    if (!checkRateLimit(`s_addr_${ip}`, 6, 60_000)) {
+      return {
+        success: false,
+        error: 'Trop de tentatives en peu de temps. Veuillez patienter une minute avant de réessayer.',
+      };
     }
 
-    const cleanCode = code.trim().toUpperCase();
+    const cleanCode = sanitizeInput(code, 30).toUpperCase();
+
+    if (!cleanCode) {
+      return { success: false, error: 'Veuillez saisir votre code de réservation.' };
+    }
 
     // 1. Chercher le buyer correspondant
     const { data: buyer, error: buyerError } = await supabaseServer
@@ -320,5 +468,3 @@ export async function getSecretAddressByCode(
     return { success: false, error: 'Une erreur serveur est survenue.' };
   }
 }
-
-

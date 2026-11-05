@@ -42,7 +42,7 @@ export default function EventDetailsPage({ params }: PageProps) {
   const [event, setEvent] = useState<Event | null>(null);
   const [djs, setDjs] = useState<DJ[]>([]);
   const [ticketTiers, setTicketTiers] = useState<TicketTier[]>([]);
-  const [buyers, setBuyers] = useState<Buyer[]>([]);
+  const [tierSalesMap, setTierSalesMap] = useState<Record<string, number>>({});
   
   const [loading, setLoading] = useState(true);
 
@@ -145,17 +145,40 @@ export default function EventDetailsPage({ params }: PageProps) {
           setTicketTiers(tiersData || []);
         }
 
-        // 4. Récupérer les acheteurs pour calculer les places vendues
-        const { data: buyersData, error: buyersError } = await supabase
-          .from('buyers')
-          .select('ticket_tier_label, ticket_count, ticket_tier_id, status')
-          .eq('event_id', eventData.id);
+        // 4. Récupérer les compteurs de places vendues de manière 100% anonyme (RPC get_event_tier_sales)
+        const salesMap: Record<string, number> = {};
+        const { data: salesData, error: salesError } = await supabase.rpc('get_event_tier_sales', {
+          p_event_id: eventData.id
+        });
 
-        if (buyersError) {
-          console.error("Erreur lors de la récupération des acheteurs:", buyersError);
+        if (!salesError && Array.isArray(salesData)) {
+          salesData.forEach((item: any) => {
+            const count = Number(item.sold_count || 0);
+            if (item.ticket_tier_id) salesMap[item.ticket_tier_id] = count;
+            if (item.ticket_tier_label) salesMap[item.ticket_tier_label] = count;
+          });
         } else {
-          setBuyers((buyersData as any) || []);
+          // Fallback rétrocompatible si la fonction SQL n'a pas encore été exécutée
+          const { data: fallbackBuyers } = await supabase
+            .from('buyers')
+            .select('ticket_tier_label, ticket_count, ticket_tier_id, status')
+            .eq('event_id', eventData.id);
+
+          if (fallbackBuyers) {
+            fallbackBuyers
+              .filter((b: any) => b.status === 'verified')
+              .forEach((b: any) => {
+                const count = b.ticket_count || 1;
+                if (b.ticket_tier_id) {
+                  salesMap[b.ticket_tier_id] = (salesMap[b.ticket_tier_id] || 0) + count;
+                }
+                if (b.ticket_tier_label) {
+                  salesMap[b.ticket_tier_label] = (salesMap[b.ticket_tier_label] || 0) + count;
+                }
+              });
+          }
         }
+        setTierSalesMap(salesMap);
       } catch (err) {
         console.error('Erreur:', err);
       } finally {
@@ -197,11 +220,15 @@ export default function EventDetailsPage({ params }: PageProps) {
     }
   }, [searchParams, event?.id]);
 
-  // Calcule le nombre d'unités vendues pour chaque catégorie
+  // Calcule le nombre d'unités vendues pour chaque catégorie à partir des compteurs sécurisés
   const getSoldUnitsForTier = (tierId: string, tierLabel: string) => {
-    return buyers
-      .filter(b => (b.ticket_tier_id === tierId || (!b.ticket_tier_id && b.ticket_tier_label === tierLabel)) && b.status === 'verified')
-      .reduce((sum, b) => sum + (b.ticket_count || 1), 0);
+    if (tierSalesMap[tierId] !== undefined) {
+      return tierSalesMap[tierId];
+    }
+    if (tierSalesMap[tierLabel] !== undefined) {
+      return tierSalesMap[tierLabel];
+    }
+    return 0;
   };
 
   const getRemainingTicketsForTier = (tier: TicketTier) => {
@@ -1224,7 +1251,8 @@ export default function EventDetailsPage({ params }: PageProps) {
                                 effectiveQuantity, 
                                 'verified',
                                 selectedTier.id,
-                                partsToSend
+                                partsToSend,
+                                details.id
                               );
                               if (result.success && result.confirmationCode) {
                                 const savedLabel = selectedTier.label;

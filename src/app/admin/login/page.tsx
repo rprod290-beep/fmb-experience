@@ -20,6 +20,9 @@ function AdminLoginForm() {
     async function checkUser() {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
+        if (session.access_token) {
+          document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; Secure`;
+        }
         router.replace(nextUrl);
       }
     }
@@ -32,7 +35,7 @@ function AdminLoginForm() {
     setErrorMsg('');
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -45,6 +48,9 @@ function AdminLoginForm() {
           setErrorMsg(error.message);
         }
       } else {
+        if (data?.session?.access_token) {
+          document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; Secure`;
+        }
         router.replace(nextUrl);
       }
     } catch (err) {

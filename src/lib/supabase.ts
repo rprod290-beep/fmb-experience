@@ -77,3 +77,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
   }
 });
+
+// Synchronisation automatique de la session avec un cookie pour le middleware Next.js
+if (typeof window !== 'undefined') {
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (session?.access_token) {
+      document.cookie = `sb-access-token=${session.access_token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; Secure`;
+    } else if (event === 'SIGNED_OUT' || !session) {
+      document.cookie = `sb-access-token=; path=/; max-age=0; SameSite=Lax; Secure`;
+    }
+  });
+}
