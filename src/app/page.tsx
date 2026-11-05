@@ -11,6 +11,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showIntro, setShowIntro] = useState(false);
+  const [isRevealing, setIsRevealing] = useState(false);
 
   const faqItems = [
     {
@@ -101,9 +102,18 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#050508] text-white relative overflow-hidden">
-      {/* Intro Cinématique avec Voix Futuriste */}
-      <CinematicIntro forceOpen={showIntro} onClose={() => setShowIntro(false)} />
+    <div className={`min-h-screen flex flex-col bg-[#050508] text-white relative overflow-hidden transition-all duration-1000 ${
+      isRevealing ? 'animate-cinematic-enter' : ''
+    }`}>
+      {/* Intro Cinématique avec Voix Féminine & Transition Théâtrale */}
+      <CinematicIntro 
+        forceOpen={showIntro} 
+        onRevealStart={() => setIsRevealing(true)} 
+        onClose={() => {
+          setShowIntro(false);
+          setIsRevealing(false);
+        }} 
+      />
 
       {/* Dynamic Background Aurora Glow */}
       <div className="fixed inset-0 -z-30 overflow-hidden pointer-events-none">
