@@ -154,4 +154,49 @@ body {
   animation: float-pink 22s infinite alternate ease-in-out;
 }
 
+/* Radar Scanner & Holographic Animations */
+@keyframes radar-sweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes radar-pulse-glow {
+  0%, 100% {
+    opacity: 0.25;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes radar-blip-ping {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.9;
+  }
+  75%, 100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+.animate-radar-sweep {
+  animation: radar-sweep 6s linear infinite;
+  transform-origin: center;
+}
+
+.animate-radar-blip-ping {
+  animation: radar-blip-ping 2.4s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.animate-radar-pulse-glow {
+  animation: radar-pulse-glow 4s ease-in-out infinite;
+}
+
 

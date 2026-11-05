@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { supabase, Event } from '@/lib/supabase';
-import { Calendar, MapPin, ArrowRight, Mail, ChevronRight, Music, Sparkles, ShieldCheck, HelpCircle } from 'lucide-react';
+import { Calendar, MapPin, ArrowRight, Mail, ChevronRight, Music, Sparkles, ShieldCheck, HelpCircle, Plane } from 'lucide-react';
+import ExperienceRadar from '@/components/ExperienceRadar';
 
 export default function Home() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-
-
+  const [activeAtmosphere, setActiveAtmosphere] = useState<'all' | 'party' | 'trip'>('all');
 
   const faqItems = [
     {
@@ -52,16 +52,23 @@ export default function Home() {
     fetchEvents();
   }, []);
 
-  // Filtrer les événements à venir (upcoming)
-  const upcomingEvents = events.filter(e => e.status === 'upcoming');
+  // Filtrer les événements à venir selon l'ambiance sélectionnée
+  const upcomingEvents = events.filter(e => {
+    if (e.status !== 'upcoming') return false;
+    if (activeAtmosphere === 'party') return e.category !== 'trip';
+    if (activeAtmosphere === 'trip') return e.category === 'trip';
+    return true;
+  });
+
+  const totalUpcomingCount = events.filter(e => e.status === 'upcoming').length;
+  const partyUpcomingCount = events.filter(e => e.status === 'upcoming' && e.category !== 'trip').length;
+  const tripUpcomingCount = events.filter(e => e.status === 'upcoming' && e.category === 'trip').length;
   
   // L'événement le plus proche à la une (le premier trié par date ascendante)
   const featuredEvent = upcomingEvents.length > 0 ? upcomingEvents[0] : null;
   
   // Les autres événements à venir (tous sauf le premier)
   const otherUpcomingEvents = upcomingEvents.length > 1 ? upcomingEvents.slice(1) : [];
-
-
 
   const formatDate = (dateString: string, endDateString?: string | null) => {
     const start = new Date(dateString);
@@ -105,12 +112,29 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#050508] text-white relative overflow-hidden">
-      {/* Dynamic Background Aurora Glow */}
-      <div className="fixed inset-0 -z-30 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-15%] w-[75vw] h-[75vw] rounded-full bg-purple-600/12 blur-[130px] aurora-blob-1"></div>
-        <div className="absolute bottom-[-15%] right-[-15%] w-[75vw] h-[75vw] rounded-full bg-pink-500/12 blur-[130px] aurora-blob-2"></div>
-        <div className="absolute top-[35%] right-[10%] w-[40vw] h-[40vw] rounded-full bg-orange-500/8 blur-[100px] aurora-blob-1"></div>
+      {/* Dynamic Background Aurora Glow qui s'adapte en temps réel à l'univers choisi */}
+      <div className="fixed inset-0 -z-30 overflow-hidden pointer-events-none transition-all duration-1000 ease-in-out">
+        {activeAtmosphere === 'trip' ? (
+          <>
+            <div className="absolute top-[-10%] left-[-15%] w-[80vw] h-[80vw] rounded-full bg-emerald-600/18 blur-[140px] aurora-blob-1 transition-all duration-1000"></div>
+            <div className="absolute bottom-[-15%] right-[-15%] w-[80vw] h-[80vw] rounded-full bg-amber-500/16 blur-[140px] aurora-blob-2 transition-all duration-1000"></div>
+            <div className="absolute top-[35%] right-[10%] w-[45vw] h-[45vw] rounded-full bg-teal-500/14 blur-[110px] aurora-blob-1 transition-all duration-1000"></div>
+          </>
+        ) : activeAtmosphere === 'party' ? (
+          <>
+            <div className="absolute top-[-10%] left-[-15%] w-[80vw] h-[80vw] rounded-full bg-purple-600/22 blur-[140px] aurora-blob-1 transition-all duration-1000"></div>
+            <div className="absolute bottom-[-15%] right-[-15%] w-[80vw] h-[80vw] rounded-full bg-pink-600/20 blur-[140px] aurora-blob-2 transition-all duration-1000"></div>
+            <div className="absolute top-[35%] right-[10%] w-[45vw] h-[45vw] rounded-full bg-fuchsia-600/15 blur-[110px] aurora-blob-1 transition-all duration-1000"></div>
+          </>
+        ) : (
+          <>
+            <div className="absolute top-[-10%] left-[-15%] w-[75vw] h-[75vw] rounded-full bg-purple-600/12 blur-[130px] aurora-blob-1 transition-all duration-1000"></div>
+            <div className="absolute bottom-[-15%] right-[-15%] w-[75vw] h-[75vw] rounded-full bg-pink-500/12 blur-[130px] aurora-blob-2 transition-all duration-1000"></div>
+            <div className="absolute top-[35%] right-[10%] w-[40vw] h-[40vw] rounded-full bg-orange-500/8 blur-[100px] aurora-blob-1 transition-all duration-1000"></div>
+          </>
+        )}
       </div>
+
       {/* Header */}
       <header className="border-b border-white/5 bg-black/40 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
@@ -130,21 +154,113 @@ export default function Home() {
       </header>
 
       {/* Main Grid Content */}
-      <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-10 sm:space-y-16">
+      <main className="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8 sm:space-y-12">
+        
+        {/* ========================================== */}
+        {/* SÉLECTEUR D'UNIVERS INTERACTIF              */}
+        {/* ========================================== */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-5 p-4 sm:p-5 rounded-3xl bg-white/[0.02] border border-white/10 backdrop-blur-md shadow-2xl animate-fade-in">
+          <div className="space-y-1 text-center md:text-left">
+            <div className="flex items-center justify-center md:justify-start gap-2">
+              <span className={`w-2 h-2 rounded-full animate-ping ${
+                activeAtmosphere === 'party' ? 'bg-purple-400' : activeAtmosphere === 'trip' ? 'bg-emerald-400' : 'bg-pink-500'
+              }`}></span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                Atmosphère Interactive
+              </span>
+            </div>
+            <h3 className="text-sm sm:text-base font-extrabold text-white tracking-wide">
+              {activeAtmosphere === 'all' && "Toutes nos expériences immersives"}
+              {activeAtmosphere === 'party' && "L'univers Soirées Privées & Événements Nocturnes"}
+              {activeAtmosphere === 'trip' && "L'univers Évasion, Cottages & Séjours Privatisés"}
+            </h3>
+            <p className="text-[11px] text-white/50 max-w-xl">
+              {activeAtmosphere === 'all' && "Basculez entre nos deux univers pour explorer les prochaines soirées et séjours d'exception."}
+              {activeAtmosphere === 'party' && "Line-ups DJs, lieux secrets dévoilés après réservation et ambiance clubbing haut de gamme."}
+              {activeAtmosphere === 'trip' && "Destinations uniques, hébergements privatifs entre amis et suivi personnalisé."}
+            </p>
+          </div>
+
+          {/* Interactive Switch Controls */}
+          <div className="inline-flex p-1.5 rounded-2xl bg-black/60 border border-white/10 backdrop-blur-xl shadow-inner relative flex-wrap sm:flex-nowrap justify-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setActiveAtmosphere('all')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                activeAtmosphere === 'all'
+                  ? 'bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white shadow-[0_0_25px_rgba(219,39,119,0.4)] scale-[1.02]'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <span>⚡️ Toutes ({totalUpcomingCount})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveAtmosphere('party')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                activeAtmosphere === 'party'
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-[0_0_25px_rgba(147,51,234,0.45)] scale-[1.02]'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Music className="w-3.5 h-3.5 text-pink-400" />
+              <span>Soirées ({partyUpcomingCount})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveAtmosphere('trip')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 cursor-pointer ${
+                activeAtmosphere === 'trip'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-500 text-white shadow-[0_0_25px_rgba(16,185,129,0.45)] scale-[1.02]'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Plane className="w-3.5 h-3.5 text-emerald-300" />
+              <span>Voyages ({tripUpcomingCount})</span>
+            </button>
+          </div>
+        </div>
+
         {loading ? (
           <div className="flex flex-col items-center justify-center py-32 gap-4">
             <div className="w-12 h-12 rounded-full border-2 border-pink-500/20 border-t-pink-500 animate-spin"></div>
             <p className="text-white/40 text-xs">Chargement des événements et séjours...</p>
           </div>
         ) : !featuredEvent ? (
-          // Empty State
-          <div className="glass-card text-center py-20 max-w-md mx-auto rounded-3xl border border-white/5 mt-10">
-            <Music className="w-12 h-12 text-white/20 mx-auto mb-4" />
-            <h3 className="text-xl font-bold mb-2">Aucun événement à venir</h3>
-            <p className="text-white/50 text-sm mb-8 leading-relaxed">
-              Nous préparons actuellement nos prochains concepts exclusifs. Restez connectés pour ne rien rater !
+          // Empty State contextualisé selon l'ambiance
+          <div className="glass-card text-center py-20 max-w-md mx-auto rounded-3xl border border-white/5 mt-6 space-y-4">
+            {activeAtmosphere === 'party' ? (
+              <Music className="w-12 h-12 text-purple-400/40 mx-auto" />
+            ) : activeAtmosphere === 'trip' ? (
+              <Plane className="w-12 h-12 text-emerald-400/40 mx-auto" />
+            ) : (
+              <Sparkles className="w-12 h-12 text-white/20 mx-auto" />
+            )}
+            <h3 className="text-xl font-bold">
+              {activeAtmosphere === 'party'
+                ? "Aucune soirée programmée pour le moment"
+                : activeAtmosphere === 'trip'
+                  ? "Aucun séjour programmé pour le moment"
+                  : "Aucun événement à venir"}
+            </h3>
+            <p className="text-white/50 text-sm leading-relaxed">
+              {activeAtmosphere === 'party'
+                ? "Nos prochaines dates de soirées privées et lieux secrets arrivent très vite. Restez connectés !"
+                : activeAtmosphere === 'trip'
+                  ? "Nous préparons nos prochaines destinations et cottages d'exception. À très vite !"
+                  : "Nous préparons actuellement nos prochains concepts exclusifs. Restez connectés pour ne rien rater !"}
             </p>
-            <div className="w-12 h-12 rounded-full bg-pink-600/10 blur-[10px] mx-auto pointer-events-none"></div>
+            {activeAtmosphere !== 'all' && (
+              <button
+                type="button"
+                onClick={() => setActiveAtmosphere('all')}
+                className="px-4 py-2 bg-white/10 hover:bg-white/15 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+              >
+                Afficher toutes les expériences
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -282,6 +398,17 @@ export default function Home() {
             )}
           </>
         )}
+        {/* ========================================== */}
+        {/* 2.5 RADAR DES DESTINATIONS & EXPÉRIENCES  */}
+        {/* ========================================== */}
+        {!loading && (
+          <ExperienceRadar
+            events={events}
+            activeAtmosphere={activeAtmosphere}
+            onAtmosphereChange={setActiveAtmosphere}
+          />
+        )}
+
         {/* ========================================== */}
         {/* 3. CONCEPT & VALEURS SECTION               */}
         {/* ========================================== */}
