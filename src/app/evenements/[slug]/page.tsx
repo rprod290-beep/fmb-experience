@@ -7,7 +7,7 @@ import { supabase, Event, DJ, TicketTier, Buyer } from '@/lib/supabase';
 import { registerBuyer, verifyConfirmationCodeAndGetAddress } from '@/app/actions';
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 
-const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || 'BAAzIRcORaDPy0QiXRb9We8sFVS2MhA3BlKS5JsgjS8Sen5EuZPENuMmsserQ3-ift8uqgMT1qX9zx-O6M';
+const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || '';
 import { 
   Calendar, 
   MapPin, 
